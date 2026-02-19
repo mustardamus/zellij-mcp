@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
-const BIN_PATH = process.env.ZELLIJ_MCP_BIN ?? "zellij";
+const DEFAULT_BIN = "zellij";
 const DEFAULT_SESSION = "zellij-mcp";
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_DELAY_MS = 60;
@@ -21,6 +21,10 @@ export interface ZellijOptions {
   raw?: boolean;
 }
 
+function getBinPath(): string {
+  return process.env.ZELLIJ_MCP_BIN ?? DEFAULT_BIN;
+}
+
 function getSession(options?: ZellijOptions): string {
   return options?.session ?? process.env.ZELLIJ_MCP_SESSION ?? DEFAULT_SESSION;
 }
@@ -34,7 +38,7 @@ function getDelayMs(): number {
 
 function exec(args: string[], timeout: number): Promise<ZellijResult> {
   return new Promise((resolve, reject) => {
-    execFile(BIN_PATH, args, { timeout }, (error, stdout, stderr) => {
+    execFile(getBinPath(), args, { timeout }, (error, stdout, stderr) => {
       if (error && "killed" in error && error.killed) {
         reject(
           new Error(
