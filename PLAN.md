@@ -183,6 +183,48 @@ Then `index.ts` imports and calls each registration function. Clean separation.
 Prefix all tools with `zellij_` so the AI agent can clearly distinguish them from other
 MCP tools. Use snake_case to match MCP conventions.
 
+### 7. Focus-preserving alternatives for mutating tools
+
+Many Zellij actions implicitly change focus as a side effect (e.g., `new-tab` switches to
+the new tab, `close-tab` moves focus to an adjacent tab). The current tools expose this
+behavior directly, but the user often does **not** want the focus to move. For example:
+
+- **Rename a tab**: The user wants to rename a background tab without leaving their
+  current tab. Today `rename_tab` operates on the focused tab, so the agent must
+  `go_to_tab` → `rename_tab` → `go_to_tab` back. This is racy and disrupts the user's
+  view.
+- **Create a tab**: The user wants to create a tab in the background without switching to
+  it. Today `new_tab` always switches focus.
+- **Close a tab**: The user wants to close a background tab without their view jumping.
+
+**Principle: Focus should only change when the user explicitly asks to switch tabs.**
+Mutating actions like create, rename, and close should preserve the user's current focus
+by default.
+
+**Implementation approach:** For each tool that has an implicit focus side effect, provide
+a focus-preserving variant that:
+
+1. Saves the current tab (via `query-tab-names` + `dump-layout` to find the focused tab)
+2. Performs the action
+3. Restores focus to the original tab
+
+Alternatively, where Zellij CLI supports it, use flags or command combinations that avoid
+the focus change entirely. For instance, `rename_tab` could accept a tab name parameter
+and internally do the focus-switch-and-restore, so the agent (and user) never sees it.
+
+**Affected tools and proposed behavior:**
+
+| Tool | Current behavior | Desired default behavior |
+|------|-----------------|------------------------|
+| `new_tab` | Creates tab and switches to it | Create tab in background; only switch if explicitly requested |
+| `rename_tab` | Renames the focused tab | Accept a target tab name; rename it without changing focus |
+| `close_tab` | Closes the focused tab, focus moves to adjacent | Accept a target tab name; close it without changing focus |
+| `go_to_tab` | Switches focus (this IS the explicit switch) | No change — this is the intentional focus-change tool |
+
+This is a significant rework of the tab tools and should be tackled after the current
+primitives are stable. The focus-save/restore pattern will rely on the 60ms post-action
+delay between sequential commands to avoid race conditions.
+
 ## Finding: Tool Descriptions Must Be Explicit About Side Effects
 
 After testing the implemented session and tab tools, a key finding emerged: **the AI
