@@ -19,10 +19,7 @@ Or in `.claude/settings.json`:
   "mcpServers": {
     "zellij-mcp": {
       "command": "npx",
-      "args": ["zellij-mcp"],
-      "env": {
-        "ZELLIJ_MCP_SESSION": "my-session"
-      }
+      "args": ["zellij-mcp"]
     }
   }
 }
@@ -37,10 +34,7 @@ In `opencode.json`:
   "mcp": {
     "zellij-mcp": {
       "type": "local",
-      "command": ["npx", "zellij-mcp"],
-      "environment": {
-        "ZELLIJ_MCP_SESSION": "my-session"
-      }
+      "command": ["npx", "zellij-mcp"]
     }
   }
 }
@@ -54,7 +48,7 @@ zellij-mcp uses stdio transport. Point your client at:
 npx zellij-mcp
 ```
 
-Set `ZELLIJ_MCP_SESSION` to target a specific Zellij session (defaults to `zellij-mcp`).
+The server automatically detects the current Zellij session. Set `ZELLIJ_MCP_SESSION_NAME` to override the target session.
 
 ## Prerequisites
 
@@ -92,9 +86,9 @@ bun run dev
 
 ## Environment Variables
 
-### `ZELLIJ_MCP_SESSION`
+### `ZELLIJ_MCP_SESSION_NAME`
 
-The Zellij session name to target with all commands. Defaults to `zellij-mcp`.
+Override the Zellij session name to target with all commands. When unset, the server automatically detects the current session via Zellij's own `ZELLIJ_SESSION_NAME` environment variable (set in every pane). Falls back to `zellij-mcp` if neither is available.
 
 ### `ZELLIJ_MCP_DELAY_MS`
 

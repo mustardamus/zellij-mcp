@@ -13,7 +13,7 @@ export interface ZellijResult {
 }
 
 export interface ZellijOptions {
-  /** Override the session name (defaults to ZELLIJ_MCP_SESSION env or "zellij-mcp") */
+  /** Override the session name (defaults to ZELLIJ_MCP_SESSION_NAME env, then ZELLIJ_SESSION_NAME env, then "zellij-mcp") */
   session?: string;
   /** Timeout in milliseconds (defaults to 10s) */
   timeout?: number;
@@ -26,7 +26,12 @@ function getBinPath(): string {
 }
 
 function getSession(options?: ZellijOptions): string {
-  return options?.session ?? process.env.ZELLIJ_MCP_SESSION ?? DEFAULT_SESSION;
+  return (
+    options?.session ??
+    process.env.ZELLIJ_MCP_SESSION_NAME ??
+    process.env.ZELLIJ_SESSION_NAME ??
+    DEFAULT_SESSION
+  );
 }
 
 function getDelayMs(): number {

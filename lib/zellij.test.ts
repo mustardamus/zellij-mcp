@@ -56,12 +56,14 @@ function getExecArgs(): {
 
 beforeEach(() => {
   execFileMock.mockReset();
-  delete process.env.ZELLIJ_MCP_SESSION;
+  delete process.env.ZELLIJ_MCP_SESSION_NAME;
+  delete process.env.ZELLIJ_SESSION_NAME;
   delete process.env.ZELLIJ_MCP_DELAY_MS;
 });
 
 afterEach(() => {
-  delete process.env.ZELLIJ_MCP_SESSION;
+  delete process.env.ZELLIJ_MCP_SESSION_NAME;
+  delete process.env.ZELLIJ_SESSION_NAME;
   delete process.env.ZELLIJ_MCP_DELAY_MS;
 });
 
@@ -93,8 +95,8 @@ describe("zellij", () => {
     ]);
   });
 
-  test("uses ZELLIJ_MCP_SESSION env var", async () => {
-    process.env.ZELLIJ_MCP_SESSION = "env-session";
+  test("uses ZELLIJ_MCP_SESSION_NAME env var", async () => {
+    process.env.ZELLIJ_MCP_SESSION_NAME = "env-session";
     mockExecResult(null, "ok", "");
     await zellij(["action", "query-tab-names"]);
 
@@ -108,7 +110,51 @@ describe("zellij", () => {
   });
 
   test("options.session takes precedence over env var", async () => {
-    process.env.ZELLIJ_MCP_SESSION = "env-session";
+    process.env.ZELLIJ_MCP_SESSION_NAME = "env-session";
+    mockExecResult(null, "ok", "");
+    await zellij(["action", "query-tab-names"], { session: "opt-session" });
+
+    const { args } = getExecArgs();
+    expect(args).toEqual([
+      "--session",
+      "opt-session",
+      "action",
+      "query-tab-names",
+    ]);
+  });
+
+  test("uses ZELLIJ_SESSION_NAME env var when ZELLIJ_MCP_SESSION_NAME is unset", async () => {
+    process.env.ZELLIJ_SESSION_NAME = "tenacious-yak";
+    mockExecResult(null, "ok", "");
+    await zellij(["action", "query-tab-names"]);
+
+    const { args } = getExecArgs();
+    expect(args).toEqual([
+      "--session",
+      "tenacious-yak",
+      "action",
+      "query-tab-names",
+    ]);
+  });
+
+  test("ZELLIJ_MCP_SESSION_NAME takes precedence over ZELLIJ_SESSION_NAME", async () => {
+    process.env.ZELLIJ_MCP_SESSION_NAME = "explicit-session";
+    process.env.ZELLIJ_SESSION_NAME = "tenacious-yak";
+    mockExecResult(null, "ok", "");
+    await zellij(["action", "query-tab-names"]);
+
+    const { args } = getExecArgs();
+    expect(args).toEqual([
+      "--session",
+      "explicit-session",
+      "action",
+      "query-tab-names",
+    ]);
+  });
+
+  test("options.session takes precedence over both env vars", async () => {
+    process.env.ZELLIJ_MCP_SESSION_NAME = "explicit-session";
+    process.env.ZELLIJ_SESSION_NAME = "tenacious-yak";
     mockExecResult(null, "ok", "");
     await zellij(["action", "query-tab-names"], { session: "opt-session" });
 
