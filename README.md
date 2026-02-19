@@ -1,14 +1,71 @@
 # zellij-mcp
 
+An [MCP](https://modelcontextprotocol.io/) server that exposes [Zellij](https://zellij.dev/) terminal multiplexer operations as tools for AI coding agents. Create tabs, open panes, run commands, read terminal output, and open files in your `$EDITOR` -- all from an AI assistant.
+
+Tools map mostly 1:1 to Zellij CLI actions, but improve on them by preserving the user's focus by default -- when an agent creates a tab or runs a command, it won't yank your view away from what you're working on.
+
+## Usage
+
+### Claude Code
+
+```bash
+claude mcp add zellij-mcp -- npx zellij-mcp
+```
+
+Or in `.claude/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "zellij-mcp": {
+      "command": "npx",
+      "args": ["zellij-mcp"],
+      "env": {
+        "ZELLIJ_MCP_SESSION": "my-session"
+      }
+    }
+  }
+}
+```
+
+### opencode
+
+In `opencode.json`:
+
+```json
+{
+  "mcp": {
+    "zellij-mcp": {
+      "type": "local",
+      "command": ["npx", "zellij-mcp"],
+      "environment": {
+        "ZELLIJ_MCP_SESSION": "my-session"
+      }
+    }
+  }
+}
+```
+
+### Other MCP clients
+
+zellij-mcp uses stdio transport. Point your client at:
+
+```bash
+npx zellij-mcp
+```
+
+Set `ZELLIJ_MCP_SESSION` to target a specific Zellij session (defaults to `zellij-mcp`).
+
 ## Prerequisites
 
 - [Bun](https://bun.sh)
+- A running [Zellij](https://zellij.dev/) session
 
 ## Setup
 
-Install dependencies and download the Zellij binary:
-
 ```bash
+git clone https://github.com/mustardamus/zellij-mcp.git
+cd zellij-mcp
 bun install
 bun run setup
 ```
@@ -27,7 +84,7 @@ Requires:
 - [Helix](https://helix-editor.com)
 - [lazygit](https://github.com/jesseduffield/lazygit)
 
-Or run the dev server standalone:
+Or run the MCP server standalone (with watch mode):
 
 ```bash
 bun run dev

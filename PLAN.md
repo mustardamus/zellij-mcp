@@ -11,6 +11,21 @@ battle-tested — the focus-based model is inherently stateful and timing-sensit
 | `check_server` | `go_to_tab("server")` → `read_pane`                 | Quick check on the dev server status         |
 | `run_and_read` | `run_command` (floating) → wait → `read_pane` → `close_pane` | Run a one-off command and return output |
 
+## TODO
+
+- **`dumpPath()` race condition** — Uses `Date.now()` for temp file names. Two concurrent `read_pane` calls in the same millisecond collide. Use `crypto.randomUUID()`.
+- **Structured error handling** — Tool callbacks let raw exceptions bubble to the MCP transport. Wrap handlers with `try/catch` and return `isError: true` responses with clean messages.
+- **Extract `withTabTarget` helper** — `rename_tab` and `close_tab` duplicate focus-preservation logic inline. Extract a shared helper to reduce divergence risk.
+- **Make post-action delay configurable** — The 60ms `POST_ACTION_DELAY_MS` is hardcoded. Add `ZELLIJ_MCP_DELAY_MS` env var for slow environments (e.g. SSH).
+- **Pin `@types/bun`** — Currently set to `latest`, which breaks reproducibility. Pin to an exact version.
+- **Add `version` to `package.json`** — `index.ts` hardcodes `"1.0.0"` but `package.json` has no version field. Read it from the manifest.
+- **Read `BIN_PATH` at call time** — `ZELLIJ_MCP_BIN` is read once at module load. Move to a getter function like `getSession()` for consistency.
+- **Fix lint warnings in tests** — 16 `noNonNullAssertion` warnings. Replace `!` with `?.` or extract helpers.
+- **Extract shared test utility** — `ToolEntry` interface and `callTool` helper are duplicated across 5 test files. Extract to a shared module.
+- **Reduce `_registeredTools` coupling** — Tests access SDK private internals. Investigate using the SDK's public API for tool invocation.
+- **npm publish config** — Add `bin`, `files`, and `exports` fields to `package.json` for `npx zellij-mcp` support.
+- **Improve download script platform support** — Only handles Linux musl and macOS. Add glibc detection, Windows error message.
+
 ## Out of Scope
 
 - **Plugin loading/management** — Complex, niche, CLI actions cover the primary needs.
