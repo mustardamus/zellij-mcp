@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { registerSessionTools } from "./lib/tools/session.ts";
+import { registerTabTools } from "./lib/tools/tabs.ts";
 
 const server = new McpServer({
   name: "zellij-mcp",
@@ -16,6 +17,7 @@ server.registerTool(
 );
 
 registerSessionTools(server);
+registerTabTools(server);
 
 const transport = new StdioServerTransport();
 await server.connect(transport);

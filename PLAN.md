@@ -125,9 +125,9 @@ careful sequencing and probably `sleep` delays between actions.
 
 ## Implementation Order
 
-1. **`lib/zellij.ts`** — The CLI wrapper. Everything depends on this.
-2. **Session tools** — Read-only, safe, instant validation that the system works.
-3. **Tab tools** — Navigation, the prerequisite for everything else.
+1. ~~**`lib/zellij.ts`** — The CLI wrapper. Everything depends on this.~~
+2. ~~**Session tools** — Read-only, safe, instant validation that the system works.~~
+3. ~~**Tab tools** — Navigation, the prerequisite for everything else.~~
 4. **Terminal I/O tools** — `write_to_pane`, `read_pane`, `run_command`. The core value.
 5. **Pane tools** — Pane management for creating workspace arrangements.
 6. **Editor tools** — Nice-to-have convenience.
