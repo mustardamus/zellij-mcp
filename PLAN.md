@@ -13,7 +13,6 @@ battle-tested — the focus-based model is inherently stateful and timing-sensit
 
 ## TODO
 
-- **`dumpPath()` race condition** — Uses `Date.now()` for temp file names. Two concurrent `read_pane` calls in the same millisecond collide. Use `crypto.randomUUID()`.
 - **Structured error handling** — Tool callbacks let raw exceptions bubble to the MCP transport. Wrap handlers with `try/catch` and return `isError: true` responses with clean messages.
 - **Extract `withTabTarget` helper** — `rename_tab` and `close_tab` duplicate focus-preservation logic inline. Extract a shared helper to reduce divergence risk.
 - **Make post-action delay configurable** — The 60ms `POST_ACTION_DELAY_MS` is hardcoded. Add `ZELLIJ_MCP_DELAY_MS` env var for slow environments (e.g. SSH).

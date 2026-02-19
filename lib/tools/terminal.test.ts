@@ -176,7 +176,7 @@ describe("zellij_read_pane", () => {
     const callArgs = call![0] as string[];
     expect(callArgs[0]).toBe("dump-screen");
     expect(callArgs).toHaveLength(2);
-    expect(callArgs[1]).toMatch(/^\/tmp\/zellij-mcp-dump-\d+\.txt$/);
+    expect(callArgs[1]).toMatch(/^\/tmp\/zellij-mcp-dump-[0-9a-f-]{36}\.txt$/);
 
     expect(readFileMock).toHaveBeenCalledWith(callArgs[1], "utf-8");
     expect(unlinkMock).toHaveBeenCalledWith(callArgs[1]);
@@ -221,7 +221,7 @@ describe("zellij_read_pane", () => {
       expect(call).toBeDefined();
       const callArgs = call![0] as string[];
       expect(callArgs[1]).toMatch(
-        /^\/custom\/dump\/dir\/zellij-mcp-dump-\d+\.txt$/,
+        /^\/custom\/dump\/dir\/zellij-mcp-dump-[0-9a-f-]{36}\.txt$/,
       );
     } finally {
       if (original === undefined) {
@@ -246,7 +246,9 @@ describe("zellij_read_pane", () => {
       const call = zellijActionOrThrowMock.mock.calls[0];
       expect(call).toBeDefined();
       const callArgs = call![0] as string[];
-      expect(callArgs[1]).toMatch(/^\/tmp\/zellij-mcp-dump-\d+\.txt$/);
+      expect(callArgs[1]).toMatch(
+        /^\/tmp\/zellij-mcp-dump-[0-9a-f-]{36}\.txt$/,
+      );
     } finally {
       if (original !== undefined) {
         process.env.ZELLIJ_MCP_DUMP_DIR = original;
@@ -275,7 +277,7 @@ describe("zellij_read_pane_full", () => {
     expect(callArgs[0]).toBe("dump-screen");
     expect(callArgs[1]).toBe("--full");
     expect(callArgs).toHaveLength(3);
-    expect(callArgs[2]).toMatch(/^\/tmp\/zellij-mcp-dump-\d+\.txt$/);
+    expect(callArgs[2]).toMatch(/^\/tmp\/zellij-mcp-dump-[0-9a-f-]{36}\.txt$/);
 
     expect(readFileMock).toHaveBeenCalledWith(callArgs[2], "utf-8");
     expect(unlinkMock).toHaveBeenCalledWith(callArgs[2]);

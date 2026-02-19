@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { readFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -15,7 +16,7 @@ function getDumpDir(): string {
 }
 
 function dumpPath(): string {
-  return join(getDumpDir(), `zellij-mcp-dump-${Date.now()}.txt`);
+  return join(getDumpDir(), `zellij-mcp-dump-${randomUUID()}.txt`);
 }
 
 async function dumpScreen(full: boolean): Promise<string> {
