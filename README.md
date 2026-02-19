@@ -33,6 +33,16 @@ Or run the dev server standalone:
 bun run dev
 ```
 
+## Environment Variables
+
+### `ZELLIJ_MCP_SESSION`
+
+The Zellij session name to target with all commands. Defaults to `zellij-mcp`.
+
+### `ZELLIJ_MCP_DUMP_DIR`
+
+Directory for temporary screen dump files created by `read_pane` and `read_pane_full`. Defaults to `/tmp`. Files are cleaned up automatically after reading.
+
 ## Tools
 
 ### Session
@@ -115,4 +125,50 @@ Close the currently focused tab in the session. Use with caution -- this is dest
 
 ```bash
 zellij --session zellij-mcp action close-tab
+```
+
+### Terminal I/O
+
+#### `zellij_write_to_pane`
+
+Send keystrokes to the currently focused pane. This is raw keystroke injection -- characters are typed exactly as provided. Append `\n` to execute a command. [Docs](https://zellij.dev/documentation/cli-actions#write-chars)
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `chars` | yes | The characters to type into the focused pane. Include `\n` for Enter key. |
+
+```bash
+zellij --session zellij-mcp action write-chars <chars>
+```
+
+#### `zellij_read_pane`
+
+Capture the visible terminal output of the currently focused pane. Writes to a temporary file in `ZELLIJ_MCP_DUMP_DIR` (defaults to `/tmp`), reads it, then cleans up. [Docs](https://zellij.dev/documentation/cli-actions#dump-screen)
+
+```bash
+zellij --session zellij-mcp action dump-screen <path>
+```
+
+#### `zellij_read_pane_full`
+
+Capture the full scrollback buffer of the currently focused pane. Same as `read_pane` but includes all history that has scrolled off screen. Output can be very large for long-running processes. [Docs](https://zellij.dev/documentation/cli-actions#dump-screen)
+
+```bash
+zellij --session zellij-mcp action dump-screen --full <path>
+```
+
+#### `zellij_run_command`
+
+Run a command in a new Zellij pane. Always creates a new pane -- does not run in the currently focused pane. [Docs](https://zellij.dev/documentation/cli-actions#run)
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `command` | yes | The command and its arguments as an array (e.g. `["npm", "test"]`). |
+| `floating` | no | If true, run in a floating pane instead of a tiled pane. |
+| `name` | no | Optional name for the new pane. |
+| `close_on_exit` | no | If true, the pane closes automatically when the command finishes. |
+| `cwd` | no | Working directory for the command. |
+
+```bash
+zellij --session zellij-mcp run [--floating] [--name <name>] [--close-on-exit] [--cwd <cwd>] -- <command...>
 ```
