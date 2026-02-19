@@ -172,3 +172,81 @@ Run a command in a new Zellij pane. Always creates a new pane -- does not run in
 ```bash
 zellij --session zellij-mcp run [--floating] [--name <name>] [--close-on-exit] [--cwd <cwd>] -- <command...>
 ```
+
+### Panes
+
+#### `zellij_new_pane`
+
+Open a new pane in the currently focused tab. By default, opens a tiled pane. Focus moves to the newly created pane. [Docs](https://zellij.dev/documentation/cli-actions#new-pane)
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `floating` | no | If true, open a floating pane instead of a tiled pane. |
+| `name` | no | Optional name for the new pane. |
+| `direction` | no | Direction to place the new tiled pane relative to the focused pane (down, right, up, left). Ignored for floating panes. |
+| `cwd` | no | Working directory for the new pane. |
+| `command` | no | Optional command and arguments to run in the new pane (e.g. `["npm", "test"]`). |
+
+```bash
+zellij --session zellij-mcp action new-pane [--floating] [--name <name>] [--direction <direction>] [--cwd <cwd>] [-- <command...>]
+```
+
+#### `zellij_close_pane`
+
+Close the currently focused pane. Any process running in the pane will be terminated. Focus moves to an adjacent pane. Use with caution -- this is destructive and cannot be undone. [Docs](https://zellij.dev/documentation/cli-actions#close-pane)
+
+```bash
+zellij --session zellij-mcp action close-pane
+```
+
+#### `zellij_focus_pane`
+
+Move focus to an adjacent pane in the given direction. Only moves focus between tiled panes. If there is no pane in the specified direction, focus does not change. [Docs](https://zellij.dev/documentation/cli-actions#move-focus)
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `direction` | yes | The direction to move focus (up, down, left, right). |
+
+```bash
+zellij --session zellij-mcp action move-focus <direction>
+```
+
+#### `zellij_toggle_floating_panes`
+
+Show or hide all floating panes in the currently focused tab. This is a toggle -- calling it twice returns to the original state. [Docs](https://zellij.dev/documentation/cli-actions#toggle-floating-panes)
+
+```bash
+zellij --session zellij-mcp action toggle-floating-panes
+```
+
+#### `zellij_toggle_fullscreen`
+
+Toggle fullscreen mode on the currently focused pane. When active, the pane expands to fill the entire tab area. Calling it again restores the original layout. Focus remains on the same pane. [Docs](https://zellij.dev/documentation/cli-actions#toggle-fullscreen)
+
+```bash
+zellij --session zellij-mcp action toggle-fullscreen
+```
+
+#### `zellij_rename_pane`
+
+Rename the currently focused pane. The name appears in the pane frame/border. Focus does not change. [Docs](https://zellij.dev/documentation/cli-actions#rename-pane)
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `name` | yes | The new name for the currently focused pane. |
+
+```bash
+zellij --session zellij-mcp action rename-pane <name>
+```
+
+#### `zellij_resize_pane`
+
+Resize the currently focused pane in the given direction. The pane grows in the specified direction, shrinking adjacent panes. Only works for tiled panes. Focus does not change. [Docs](https://zellij.dev/documentation/cli-actions#resize)
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `direction` | yes | The direction to grow the pane (up, down, left, right). |
+
+```bash
+zellij --session zellij-mcp action resize <direction>
+```
