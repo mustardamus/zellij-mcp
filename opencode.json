@@ -5,7 +5,10 @@
   "mcp": {
     "zellij-mcp": {
       "type": "local",
-      "command": ["bun", "run", "index.ts"]
+      "command": ["bun", "run", "index.ts"],
+      "environment": {
+        "ZELLIJ_MCP_BIN": "./bin/zellij"
+      }
     }
   }
 }

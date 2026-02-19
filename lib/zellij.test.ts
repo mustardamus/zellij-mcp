@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { join } from "node:path";
 
-const BIN_PATH = join(import.meta.dirname, "..", "bin", "zellij");
+const BIN_PATH = process.env.ZELLIJ_MCP_BIN ?? "zellij";
 
 const execFileMock = mock();
 

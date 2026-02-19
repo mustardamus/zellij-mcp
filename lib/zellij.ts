@@ -1,7 +1,6 @@
 import { execFile } from "node:child_process";
-import { join } from "node:path";
 
-const BIN_PATH = join(import.meta.dirname, "..", "bin", "zellij");
+const BIN_PATH = process.env.ZELLIJ_MCP_BIN ?? "zellij";
 const DEFAULT_SESSION = "zellij-mcp";
 const DEFAULT_TIMEOUT_MS = 10_000;
 const POST_ACTION_DELAY_MS = 60;

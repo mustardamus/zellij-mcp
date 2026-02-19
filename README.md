@@ -191,6 +191,19 @@ Send keystrokes to the currently focused pane. This is raw keystroke injection -
 zellij --session zellij-mcp action write-chars <chars>
 ```
 
+#### `zellij_execute_command`
+
+Execute a command in the currently focused pane by writing the command text followed by a real Enter keypress. Unlike `write_to_pane`, this tool automatically sends the Enter key by writing raw byte 13 (carriage return) via `zellij action write`, rather than appending a `\n` character. Use this when you want to run a command in an existing pane (e.g. a shell) rather than spawning a new pane. [Docs](https://zellij.dev/documentation/cli-actions#write-chars)
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `command` | yes | The command to execute in the focused pane. The Enter key is sent automatically -- do not include a trailing newline. |
+
+```bash
+zellij --session zellij-mcp action write-chars <command>
+zellij --session zellij-mcp action write 13
+```
+
 #### `zellij_read_pane`
 
 Capture the visible terminal output of the currently focused pane. Writes to a temporary file in `ZELLIJ_MCP_DUMP_DIR` (defaults to `/tmp`), reads it, then cleans up. [Docs](https://zellij.dev/documentation/cli-actions#dump-screen)

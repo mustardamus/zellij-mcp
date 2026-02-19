@@ -66,6 +66,38 @@ export function registerTerminalTools(server: McpServer) {
   );
 
   server.registerTool(
+    "zellij_execute_command",
+    {
+      title: "Execute Command",
+      description:
+        "Execute a command in the currently focused pane by writing the command text followed by a real Enter keypress (carriage return, char 13). " +
+        "Unlike write_to_pane which requires manually appending a newline, this tool automatically sends the proper terminal Enter key after the command. " +
+        "Use this when you want to run a command in an existing pane (e.g. a shell) rather than spawning a new pane. " +
+        "IMPORTANT: Always verify you are on the correct tab/pane before calling this tool (use go_to_tab or query_tab_names first). " +
+        "This action does not change focus — the focused tab/pane remains the same after the command is executed.",
+      inputSchema: {
+        command: z
+          .string()
+          .describe(
+            "The command to execute in the focused pane. The Enter key (carriage return) is sent automatically — do not include a trailing newline.",
+          ),
+      },
+    },
+    async ({ command }) => {
+      await zellijActionOrThrow(["write-chars", command]);
+      await zellijActionOrThrow(["write", "13"]);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Executed command in the focused pane: ${command}`,
+          },
+        ],
+      };
+    },
+  );
+
+  server.registerTool(
     "zellij_read_pane",
     {
       title: "Read Pane",

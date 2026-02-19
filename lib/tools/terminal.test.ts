@@ -95,6 +95,66 @@ describe("zellij_write_to_pane", () => {
   });
 });
 
+describe("zellij_execute_command", () => {
+  test("calls write-chars for the command text then write 13 for Enter", async () => {
+    zellijActionOrThrowMock.mockResolvedValue("");
+    const result = await callTool("zellij_execute_command", {
+      command: "ls -la",
+    });
+
+    expect(zellijActionOrThrowMock).toHaveBeenCalledTimes(2);
+    expect(zellijActionOrThrowMock).toHaveBeenNthCalledWith(1, [
+      "write-chars",
+      "ls -la",
+    ]);
+    expect(zellijActionOrThrowMock).toHaveBeenNthCalledWith(2, ["write", "13"]);
+    expect(result).toEqual({
+      content: [
+        {
+          type: "text",
+          text: "Executed command in the focused pane: ls -la",
+        },
+      ],
+    });
+  });
+
+  test("handles empty command (still sends Enter)", async () => {
+    zellijActionOrThrowMock.mockResolvedValue("");
+    const result = await callTool("zellij_execute_command", { command: "" });
+
+    expect(zellijActionOrThrowMock).toHaveBeenCalledTimes(2);
+    expect(zellijActionOrThrowMock).toHaveBeenNthCalledWith(1, [
+      "write-chars",
+      "",
+    ]);
+    expect(zellijActionOrThrowMock).toHaveBeenNthCalledWith(2, ["write", "13"]);
+    expect(result).toEqual({
+      content: [
+        {
+          type: "text",
+          text: "Executed command in the focused pane: ",
+        },
+      ],
+    });
+  });
+
+  test("propagates errors from write-chars", async () => {
+    zellijActionOrThrowMock.mockRejectedValue(new Error("write failed"));
+    await expect(
+      callTool("zellij_execute_command", { command: "test" }),
+    ).rejects.toThrow("write failed");
+  });
+
+  test("propagates errors from write 13", async () => {
+    zellijActionOrThrowMock
+      .mockResolvedValueOnce("")
+      .mockRejectedValueOnce(new Error("enter failed"));
+    await expect(
+      callTool("zellij_execute_command", { command: "test" }),
+    ).rejects.toThrow("enter failed");
+  });
+});
+
 describe("zellij_read_pane", () => {
   test("calls dump-screen, reads the temp file, and cleans up", async () => {
     zellijActionOrThrowMock.mockResolvedValue("");
