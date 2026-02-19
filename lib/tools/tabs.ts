@@ -15,6 +15,9 @@ export function registerTabTools(server: McpServer) {
         "Switch to a named tab in the Zellij session. Use query_tab_names first to discover available tab names. " +
         "The focus change is visible to the human user and affects all clients connected to the session. " +
         "Calling this with the already-focused tab name has no additional effect.",
+      annotations: {
+        idempotentHint: true,
+      },
       inputSchema: {
         name: z
           .string()

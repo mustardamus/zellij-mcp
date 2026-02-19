@@ -7,6 +7,9 @@ export function registerSessionTools(server: McpServer) {
     {
       title: "List Zellij Sessions",
       description: "List all active Zellij sessions.",
+      annotations: {
+        readOnlyHint: true,
+      },
     },
     async () => {
       const stdout = await zellijRawOrThrow([
@@ -27,6 +30,9 @@ export function registerSessionTools(server: McpServer) {
         "Get all tab names in the current Zellij session. Returns one tab name per line. " +
         "Note: This only returns tab names — it does not indicate which tab is currently focused. " +
         "Use dump_layout to determine the focused tab (look for focus=true in the output).",
+      annotations: {
+        readOnlyHint: true,
+      },
     },
     async () => {
       const stdout = await zellijActionOrThrow(["query-tab-names"]);
@@ -42,6 +48,9 @@ export function registerSessionTools(server: McpServer) {
         "Dump the full current layout of the Zellij session to understand the workspace structure including tabs, panes, and their arrangement. " +
         "The output is in KDL format and contains focus=true attributes that indicate which tab and pane are currently focused. " +
         "This is the only tool that can reveal the current focus state of the session.",
+      annotations: {
+        readOnlyHint: true,
+      },
     },
     async () => {
       const stdout = await zellijActionOrThrow(["dump-layout"]);
@@ -56,6 +65,9 @@ export function registerSessionTools(server: McpServer) {
       description:
         "List all clients connected to the current Zellij session, their focused pane id, and their running command. " +
         "Returns tabular output with columns: CLIENT_ID, ZELLIJ_PANE_ID, RUNNING_COMMAND.",
+      annotations: {
+        readOnlyHint: true,
+      },
     },
     async () => {
       const stdout = await zellijActionOrThrow(["list-clients"]);
