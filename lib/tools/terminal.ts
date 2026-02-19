@@ -41,56 +41,36 @@ export function registerTerminalTools(server: McpServer) {
       description:
         "Send keystrokes to the currently focused pane in the Zellij session. " +
         "This is raw keystroke injection — characters are typed exactly as provided into whatever pane is focused. " +
-        "To execute a command, append a newline character (\\n) at the end of the string (e.g. 'ls -la\\n'). " +
+        "By default, a carriage return (Enter key, char 13) is sent AFTER the characters to execute them. " +
+        "Set enter to false to skip the trailing Enter and send only the raw characters. " +
         "IMPORTANT: Always verify you are on the correct tab/pane before calling this tool (use go_to_tab or query_tab_names first). " +
         "This action does not change focus — the focused tab/pane remains the same after the keystrokes are sent.",
       inputSchema: {
         chars: z
           .string()
+          .describe("The characters to type into the focused pane."),
+        enter: z
+          .boolean()
+          .optional()
           .describe(
-            "The characters to type into the focused pane. Include \\n for Enter key.",
+            "If true (default), send a carriage return (char 13) after writing the characters to execute them. Set to false to skip the trailing Enter.",
           ),
       },
     },
-    async ({ chars }) => {
-      await zellijActionOrThrow(["write-chars", chars]);
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Sent ${chars.length} character(s) to the focused pane.`,
-          },
-        ],
-      };
-    },
-  );
+    async ({ chars, enter }) => {
+      const sendEnter = enter !== false;
 
-  server.registerTool(
-    "zellij_execute_command",
-    {
-      title: "Execute Command",
-      description:
-        "Execute a command in the currently focused pane by writing the command text followed by a real Enter keypress (carriage return, char 13). " +
-        "Unlike write_to_pane which requires manually appending a newline, this tool automatically sends the proper terminal Enter key after the command. " +
-        "Use this when you want to run a command in an existing pane (e.g. a shell) rather than spawning a new pane. " +
-        "IMPORTANT: Always verify you are on the correct tab/pane before calling this tool (use go_to_tab or query_tab_names first). " +
-        "This action does not change focus — the focused tab/pane remains the same after the command is executed.",
-      inputSchema: {
-        command: z
-          .string()
-          .describe(
-            "The command to execute in the focused pane. The Enter key (carriage return) is sent automatically — do not include a trailing newline.",
-          ),
-      },
-    },
-    async ({ command }) => {
-      await zellijActionOrThrow(["write-chars", command]);
-      await zellijActionOrThrow(["write", "13"]);
+      await zellijActionOrThrow(["write-chars", chars]);
+
+      if (sendEnter) {
+        await zellijActionOrThrow(["write", "13"]);
+      }
+
       return {
         content: [
           {
             type: "text",
-            text: `Executed command in the focused pane: ${command}`,
+            text: `Sent ${chars.length} character(s) to the focused pane${sendEnter ? " (followed by Enter)" : ""}.`,
           },
         ],
       };

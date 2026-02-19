@@ -181,27 +181,16 @@ zellij --session zellij-mcp action close-tab
 
 #### `zellij_write_to_pane`
 
-Send keystrokes to the currently focused pane. This is raw keystroke injection -- characters are typed exactly as provided. Append `\n` to execute a command. [Docs](https://zellij.dev/documentation/cli-actions#write-chars)
+Send keystrokes to the currently focused pane. This is raw keystroke injection -- characters are typed exactly as provided. By default, a carriage return (Enter key, char 13) is sent after the characters to execute them. Set `enter` to `false` to send only the raw characters without a trailing Enter. [Docs](https://zellij.dev/documentation/cli-actions#write-chars)
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
-| `chars` | yes | The characters to type into the focused pane. Include `\n` for Enter key. |
+| `chars` | yes | The characters to type into the focused pane. |
+| `enter` | no | If true (default), send a carriage return (char 13) after the characters. Set to false to skip the trailing Enter. |
 
 ```bash
 zellij --session zellij-mcp action write-chars <chars>
-```
-
-#### `zellij_execute_command`
-
-Execute a command in the currently focused pane by writing the command text followed by a real Enter keypress. Unlike `write_to_pane`, this tool automatically sends the Enter key by writing raw byte 13 (carriage return) via `zellij action write`, rather than appending a `\n` character. Use this when you want to run a command in an existing pane (e.g. a shell) rather than spawning a new pane. [Docs](https://zellij.dev/documentation/cli-actions#write-chars)
-
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `command` | yes | The command to execute in the focused pane. The Enter key is sent automatically -- do not include a trailing newline. |
-
-```bash
-zellij --session zellij-mcp action write-chars <command>
-zellij --session zellij-mcp action write 13
+zellij --session zellij-mcp action write 13        # sent automatically unless enter=false
 ```
 
 #### `zellij_read_pane`

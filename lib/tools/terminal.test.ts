@@ -58,48 +58,10 @@ beforeEach(() => {
 });
 
 describe("zellij_write_to_pane", () => {
-  test("calls zellijActionOrThrow with write-chars and the characters", async () => {
+  test("by default sends write-chars then write 13 (Enter)", async () => {
     zellijActionOrThrowMock.mockResolvedValue("");
     const result = await callTool("zellij_write_to_pane", {
-      chars: "ls -la\n",
-    });
-
-    expect(zellijActionOrThrowMock).toHaveBeenCalledWith([
-      "write-chars",
-      "ls -la\n",
-    ]);
-    expect(result).toEqual({
-      content: [
-        { type: "text", text: "Sent 7 character(s) to the focused pane." },
-      ],
-    });
-  });
-
-  test("handles empty string", async () => {
-    zellijActionOrThrowMock.mockResolvedValue("");
-    const result = await callTool("zellij_write_to_pane", { chars: "" });
-
-    expect(zellijActionOrThrowMock).toHaveBeenCalledWith(["write-chars", ""]);
-    expect(result).toEqual({
-      content: [
-        { type: "text", text: "Sent 0 character(s) to the focused pane." },
-      ],
-    });
-  });
-
-  test("propagates errors from zellijActionOrThrow", async () => {
-    zellijActionOrThrowMock.mockRejectedValue(new Error("write failed"));
-    await expect(
-      callTool("zellij_write_to_pane", { chars: "test" }),
-    ).rejects.toThrow("write failed");
-  });
-});
-
-describe("zellij_execute_command", () => {
-  test("calls write-chars for the command text then write 13 for Enter", async () => {
-    zellijActionOrThrowMock.mockResolvedValue("");
-    const result = await callTool("zellij_execute_command", {
-      command: "ls -la",
+      chars: "ls -la",
     });
 
     expect(zellijActionOrThrowMock).toHaveBeenCalledTimes(2);
@@ -112,15 +74,60 @@ describe("zellij_execute_command", () => {
       content: [
         {
           type: "text",
-          text: "Executed command in the focused pane: ls -la",
+          text: "Sent 6 character(s) to the focused pane (followed by Enter).",
         },
       ],
     });
   });
 
-  test("handles empty command (still sends Enter)", async () => {
+  test("sends Enter after chars when enter is explicitly true", async () => {
     zellijActionOrThrowMock.mockResolvedValue("");
-    const result = await callTool("zellij_execute_command", { command: "" });
+    const result = await callTool("zellij_write_to_pane", {
+      chars: "echo hi",
+      enter: true,
+    });
+
+    expect(zellijActionOrThrowMock).toHaveBeenCalledTimes(2);
+    expect(zellijActionOrThrowMock).toHaveBeenNthCalledWith(1, [
+      "write-chars",
+      "echo hi",
+    ]);
+    expect(zellijActionOrThrowMock).toHaveBeenNthCalledWith(2, ["write", "13"]);
+    expect(result).toEqual({
+      content: [
+        {
+          type: "text",
+          text: "Sent 7 character(s) to the focused pane (followed by Enter).",
+        },
+      ],
+    });
+  });
+
+  test("does not send Enter when enter is false", async () => {
+    zellijActionOrThrowMock.mockResolvedValue("");
+    const result = await callTool("zellij_write_to_pane", {
+      chars: "partial text",
+      enter: false,
+    });
+
+    expect(zellijActionOrThrowMock).toHaveBeenCalledTimes(1);
+    expect(zellijActionOrThrowMock).toHaveBeenCalledWith([
+      "write-chars",
+      "partial text",
+    ]);
+    expect(result).toEqual({
+      content: [
+        {
+          type: "text",
+          text: "Sent 12 character(s) to the focused pane.",
+        },
+      ],
+    });
+  });
+
+  test("handles empty string (still sends Enter by default)", async () => {
+    zellijActionOrThrowMock.mockResolvedValue("");
+    const result = await callTool("zellij_write_to_pane", { chars: "" });
 
     expect(zellijActionOrThrowMock).toHaveBeenCalledTimes(2);
     expect(zellijActionOrThrowMock).toHaveBeenNthCalledWith(1, [
@@ -132,7 +139,7 @@ describe("zellij_execute_command", () => {
       content: [
         {
           type: "text",
-          text: "Executed command in the focused pane: ",
+          text: "Sent 0 character(s) to the focused pane (followed by Enter).",
         },
       ],
     });
@@ -141,7 +148,7 @@ describe("zellij_execute_command", () => {
   test("propagates errors from write-chars", async () => {
     zellijActionOrThrowMock.mockRejectedValue(new Error("write failed"));
     await expect(
-      callTool("zellij_execute_command", { command: "test" }),
+      callTool("zellij_write_to_pane", { chars: "test" }),
     ).rejects.toThrow("write failed");
   });
 
@@ -150,7 +157,7 @@ describe("zellij_execute_command", () => {
       .mockResolvedValueOnce("")
       .mockRejectedValueOnce(new Error("enter failed"));
     await expect(
-      callTool("zellij_execute_command", { command: "test" }),
+      callTool("zellij_write_to_pane", { chars: "test" }),
     ).rejects.toThrow("enter failed");
   });
 });
