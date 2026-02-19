@@ -78,7 +78,9 @@ describe("zellij_new_tab", () => {
       "debug",
     ]);
     expect(result).toEqual({
-      content: [{ type: "text", text: 'Created new tab "debug".' }],
+      content: [
+        { type: "text", text: 'Created and switched to new tab "debug".' },
+      ],
     });
   });
 
@@ -88,7 +90,9 @@ describe("zellij_new_tab", () => {
 
     expect(zellijActionOrThrowMock).toHaveBeenCalledWith(["new-tab"]);
     expect(result).toEqual({
-      content: [{ type: "text", text: "Created new tab (unnamed)." }],
+      content: [
+        { type: "text", text: "Created and switched to new tab (unnamed)." },
+      ],
     });
   });
 

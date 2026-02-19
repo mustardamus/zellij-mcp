@@ -4,6 +4,7 @@ import { join } from "node:path";
 const BIN_PATH = join(import.meta.dirname, "..", "bin", "zellij");
 const DEFAULT_SESSION = "zellij-mcp";
 const DEFAULT_TIMEOUT_MS = 10_000;
+const POST_ACTION_DELAY_MS = 60;
 
 export interface ZellijResult {
   stdout: string;
@@ -90,6 +91,10 @@ export async function zellijAction(
 
 /**
  * Execute a zellij action and return stdout. Throws on non-zero exit code.
+ *
+ * Includes a short post-action delay to allow the Zellij server to process the
+ * action before subsequent commands are sent. The CLI process exiting only means
+ * it delivered the message — the server handles it asynchronously.
  */
 export async function zellijActionOrThrow(
   args: string[],
@@ -103,6 +108,8 @@ export async function zellijActionOrThrow(
       `zellij action ${args[0]} failed (exit ${result.exitCode}): ${detail}`,
     );
   }
+
+  await new Promise((resolve) => setTimeout(resolve, POST_ACTION_DELAY_MS));
 
   return result.stdout;
 }

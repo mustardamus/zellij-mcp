@@ -30,7 +30,7 @@ export function registerTabTools(server: McpServer) {
     {
       title: "New Tab",
       description:
-        "Create a new tab in the Zellij session with an optional name and layout.",
+        "Create a new tab in the Zellij session with an optional name and layout. Automatically switches focus to the new tab — there is no need to call go_to_tab afterward.",
       inputSchema: {
         name: z
           .string()
@@ -66,7 +66,11 @@ export function registerTabTools(server: McpServer) {
       await zellijActionOrThrow(args);
 
       const label = name ? `"${name}"` : "(unnamed)";
-      return { content: [{ type: "text", text: `Created new tab ${label}.` }] };
+      return {
+        content: [
+          { type: "text", text: `Created and switched to new tab ${label}.` },
+        ],
+      };
     },
   );
 

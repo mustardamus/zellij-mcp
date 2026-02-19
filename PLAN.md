@@ -183,6 +183,59 @@ Then `index.ts` imports and calls each registration function. Clean separation.
 Prefix all tools with `zellij_` so the AI agent can clearly distinguish them from other
 MCP tools. Use snake_case to match MCP conventions.
 
+## Finding: Tool Descriptions Must Be Explicit About Side Effects
+
+After testing the implemented session and tab tools, a key finding emerged: **the AI
+agent only knows what the tool descriptions tell it**. Any implicit Zellij behavior that
+is not spelled out in the description will lead to incorrect tool usage — redundant
+calls, race conditions, or actions on the wrong tab.
+
+### The Problem
+
+When asked to "create a new tab named shell and switch to it", the AI agent called
+`new_tab` followed by `go_to_tab` — not knowing that `new-tab` already switches focus.
+The redundant `go_to_tab` raced with the focus switch from `new-tab`, because the Zellij
+CLI exiting only means it delivered the message; the server processes it asynchronously.
+
+This was fixed by:
+1. Making `new_tab`'s description explicit: "Automatically switches focus to the new tab
+   — there is no need to call go_to_tab afterward."
+2. Adding a 100ms post-action delay in `zellijActionOrThrow` to give the server time to
+   process before the next command is sent.
+
+### Rules for All Tool Descriptions Going Forward
+
+Every tool description must explicitly state:
+
+1. **What it operates on** — "the currently focused tab", "the session", etc. The agent
+   must never have to guess the target.
+2. **Focus side effects** — If the action changes which tab/pane is focused, say so. If
+   focus does NOT change, that's worth stating too.
+3. **Post-action state** — What state is the session in after the action? Which tab/pane
+   is focused? What was created/destroyed?
+4. **What the agent should NOT do** — If a follow-up action is unnecessary (like calling
+   `go_to_tab` after `new_tab`), say "there is no need to call X afterward."
+5. **Ordering requirements** — If the tool requires a precondition (e.g., `rename_tab`
+   requires the target tab to be focused first), the description must say so.
+
+### Specific Gaps to Address in Existing Tools
+
+| Tool | Gap |
+|------|-----|
+| `query_tab_names` | Does not mention it cannot show which tab is focused — only `dump_layout` can reveal focus state |
+| `dump_layout` | Does not mention the output is KDL format, or that it contains `focus=true` attributes showing the focused tab/pane |
+| `go_to_tab` | Does not mention the focus change is visible to the human user, or that it affects all clients in the session |
+| `rename_tab` | Does not warn that the agent must navigate to the target tab first if it is not already focused |
+| `close_tab` | Does not mention that focus moves to an adjacent tab afterward, that all panes/processes in the tab are killed, or that closing the last tab terminates the session |
+| `list_clients` | Does not describe the output format (tabular with CLIENT_ID, ZELLIJ_PANE_ID, RUNNING_COMMAND columns) |
+
+### Missing MCP Annotations
+
+The MCP spec supports `readOnlyHint`, `idempotentHint`, and `openWorldHint` annotations.
+Currently only `close_tab` has `destructiveHint: true`. The read-only session tools
+should declare `readOnlyHint: true`, and `go_to_tab` should declare
+`idempotentHint: true` (calling it twice with the same name has no additional effect).
+
 ## What NOT to Build (Initially)
 
 - **Plugin loading/management** (`zellij plugin`, `zellij pipe`) — Complex, niche, CLI
