@@ -5,10 +5,11 @@ import { registerPaneTools } from "./lib/tools/panes.ts";
 import { registerSessionTools } from "./lib/tools/session.ts";
 import { registerTabTools } from "./lib/tools/tabs.ts";
 import { registerTerminalTools } from "./lib/tools/terminal.ts";
+import pkg from "./package.json";
 
 const server = new McpServer({
-  name: "zellij-mcp",
-  version: "1.0.0",
+  name: pkg.name,
+  version: pkg.version,
 });
 
 server.registerTool(
