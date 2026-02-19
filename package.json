@@ -1,6 +1,6 @@
 {
   "name": "zellij-mcp",
-  "version": "0.0.1",
+  "version": "0.0.4",
   "description": "MCP server that exposes Zellij terminal multiplexer operations as tools for AI coding agents",
   "license": "MIT",
   "author": "Sebastian Senf",
@@ -29,11 +29,11 @@
     "format": "biome format --write .",
     "test": "bun test",
     "check": "biome check --write .",
-    "build": "bun build ./index.ts --outdir dist --target node --minify",
+    "build": "bun build ./index.ts --outdir dist --target node --minify && printf '#!/usr/bin/env node\n' | cat - dist/index.js > dist/tmp.js && mv dist/tmp.js dist/index.js && chmod +x dist/index.js",
     "prepublishOnly": "bun run build"
   },
   "bin": {
-    "zellij-mcp": "./dist/index.js"
+    "zellij-mcp": "dist/index.js"
   },
   "files": [
     "dist"
