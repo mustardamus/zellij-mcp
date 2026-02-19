@@ -1,9 +1,9 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
-  getFocusedTabName,
   safeTool,
   withFocusPreservation,
+  withTabTarget,
   zellijActionOrThrow,
 } from "../zellij.ts";
 
@@ -122,13 +122,9 @@ export function registerTabTools(server: McpServer) {
     async ({ name, target }) =>
       safeTool(async () => {
         if (target) {
-          const focusedTab = await getFocusedTabName();
-          await zellijActionOrThrow(["go-to-tab-name", target]);
-          await zellijActionOrThrow(["rename-tab", name]);
-
-          if (focusedTab && focusedTab !== target) {
-            await zellijActionOrThrow(["go-to-tab-name", focusedTab]);
-          }
+          await withTabTarget(target, () =>
+            zellijActionOrThrow(["rename-tab", name]),
+          );
 
           return {
             content: [
@@ -172,13 +168,7 @@ export function registerTabTools(server: McpServer) {
     async ({ target }) =>
       safeTool(async () => {
         if (target) {
-          const focusedTab = await getFocusedTabName();
-          await zellijActionOrThrow(["go-to-tab-name", target]);
-          await zellijActionOrThrow(["close-tab"]);
-
-          if (focusedTab && focusedTab !== target) {
-            await zellijActionOrThrow(["go-to-tab-name", focusedTab]);
-          }
+          await withTabTarget(target, () => zellijActionOrThrow(["close-tab"]));
 
           return {
             content: [{ type: "text", text: `Closed tab "${target}".` }],

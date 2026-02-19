@@ -203,3 +203,28 @@ export async function withFocusPreservation<T>(
 
   return result;
 }
+
+/**
+ * Navigate to a specific tab by name, run an action, then restore focus to the
+ * original tab — but only if the original tab differs from the target.
+ *
+ * This avoids a redundant (or impossible, after close) navigation back when
+ * the user is already on the target tab.
+ *
+ * Used by tools that accept an optional `target` parameter (rename_tab, close_tab).
+ */
+export async function withTabTarget<T>(
+  target: string,
+  action: () => Promise<T>,
+  options?: ZellijOptions,
+): Promise<T> {
+  const focusedTab = await getFocusedTabName(options);
+  await zellijActionOrThrow(["go-to-tab-name", target], options);
+  const result = await action();
+
+  if (focusedTab && focusedTab !== target) {
+    await zellijActionOrThrow(["go-to-tab-name", focusedTab], options);
+  }
+
+  return result;
+}
