@@ -9,7 +9,6 @@ mock.module("node:child_process", () => ({
   execFile: execFileMock,
 }));
 
-// Import after mocking so the module picks up the mock
 const {
   zellij,
   zellijAction,
@@ -18,9 +17,6 @@ const {
   zellijRawOrThrow,
 } = await import("./zellij.ts");
 
-/**
- * Helper: make execFileMock call its callback with the given values.
- */
 function mockExecResult(error: Error | null, stdout: string, stderr: string) {
   execFileMock.mockImplementation(
     (
@@ -34,25 +30,16 @@ function mockExecResult(error: Error | null, stdout: string, stderr: string) {
   );
 }
 
-/**
- * Helper: make execFileMock call its callback with a non-zero exit code error.
- */
 function mockExecError(code: number | string, stderr = "") {
   const err = Object.assign(new Error("command failed"), { code });
   mockExecResult(err, "", stderr);
 }
 
-/**
- * Helper: make execFileMock simulate a killed/timed-out process.
- */
 function mockExecTimeout() {
   const err = Object.assign(new Error("timed out"), { killed: true });
   mockExecResult(err, "", "");
 }
 
-/**
- * Helper: get the args that execFile was called with.
- */
 function getExecArgs(): {
   bin: string;
   args: string[];
@@ -74,10 +61,6 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.ZELLIJ_MCP_SESSION;
 });
-
-// ---------------------------------------------------------------------------
-// zellij()
-// ---------------------------------------------------------------------------
 
 describe("zellij", () => {
   test("prepends --session zellij-mcp by default", async () => {
@@ -197,10 +180,6 @@ describe("zellij", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// zellijAction()
-// ---------------------------------------------------------------------------
-
 describe("zellijAction", () => {
   test("prepends 'action' to args", async () => {
     mockExecResult(null, "ok", "");
@@ -223,10 +202,6 @@ describe("zellijAction", () => {
     expect(args).toEqual(["--session", "custom", "action", "query-tab-names"]);
   });
 });
-
-// ---------------------------------------------------------------------------
-// zellijActionOrThrow()
-// ---------------------------------------------------------------------------
 
 describe("zellijActionOrThrow", () => {
   test("returns stdout on success", async () => {
@@ -269,10 +244,6 @@ describe("zellijActionOrThrow", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// zellijRaw()
-// ---------------------------------------------------------------------------
-
 describe("zellijRaw", () => {
   test("skips session injection", async () => {
     mockExecResult(null, "session1\nsession2\n", "");
@@ -290,10 +261,6 @@ describe("zellijRaw", () => {
     expect(opts.timeout).toBe(3000);
   });
 });
-
-// ---------------------------------------------------------------------------
-// zellijRawOrThrow()
-// ---------------------------------------------------------------------------
 
 describe("zellijRawOrThrow", () => {
   test("returns stdout on success", async () => {
