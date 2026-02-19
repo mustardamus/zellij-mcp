@@ -8,6 +8,7 @@
     "dev:zellij": "./bin/zellij delete-session zellij-mcp 2>/dev/null; ./bin/zellij --config-dir ./zellij -s zellij-mcp",
     "lint": "biome lint .",
     "format": "biome format --write .",
+    "test": "bun test",
     "check": "biome check --write ."
   },
   "devDependencies": {
