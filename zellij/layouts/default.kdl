@@ -1,0 +1,45 @@
+layout {
+    tab name="agent" focus=true {
+        pane size=1 borderless=true {
+            plugin location="tab-bar"
+        }
+        pane command="opencode"
+        pane size=1 borderless=true {
+            plugin location="status-bar"
+        }
+    }
+
+    tab name="editor" {
+        pane size=1 borderless=true {
+            plugin location="tab-bar"
+        }
+        pane command="helix" {
+            args "."
+        }
+        pane size=1 borderless=true {
+            plugin location="status-bar"
+        }
+    }
+
+    tab name="server" {
+        pane size=1 borderless=true {
+            plugin location="tab-bar"
+        }
+        pane command="bun" {
+            args "run" "dev"
+        }
+        pane size=1 borderless=true {
+            plugin location="status-bar"
+        }
+    }
+
+    tab name="git" {
+        pane size=1 borderless=true {
+            plugin location="tab-bar"
+        }
+        pane command="lazygit"
+        pane size=1 borderless=true {
+            plugin location="status-bar"
+        }
+    }
+}

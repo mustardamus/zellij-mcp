@@ -3,6 +3,9 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
+    "setup": "bun run scripts/download-zellij.ts",
+    "dev": "bun run --watch index.ts",
+    "dev:zellij": "./bin/zellij delete-session zellij-mcp 2>/dev/null; ./bin/zellij --config-dir ./zellij -s zellij-mcp",
     "lint": "biome lint .",
     "format": "biome format --write .",
     "check": "biome check --write ."

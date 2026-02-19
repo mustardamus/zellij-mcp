@@ -1,15 +1,34 @@
 # zellij-mcp
 
-To install dependencies:
+## Prerequisites
+
+- [Bun](https://bun.sh)
+
+## Setup
+
+Install dependencies and download the Zellij binary:
 
 ```bash
 bun install
+bun run setup
 ```
 
-To run:
+## Development
+
+Start a Zellij session with four tabs - agent, editor, server, and git:
 
 ```bash
-bun run index.ts
+bun run dev:zellij
 ```
 
-This project was created using `bun init` in bun v1.3.9. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+Requires:
+
+- [opencode](https://opencode.ai)
+- [Helix](https://helix-editor.com)
+- [lazygit](https://github.com/jesseduffield/lazygit)
+
+Or run the dev server standalone:
+
+```bash
+bun run dev
+```
