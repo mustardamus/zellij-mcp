@@ -96,6 +96,10 @@ bun run dev
 
 The Zellij session name to target with all commands. Defaults to `zellij-mcp`.
 
+### `ZELLIJ_MCP_DELAY_MS`
+
+Post-action delay in milliseconds. After each Zellij action, the server waits this long for the Zellij server to process the action before sending the next command. Defaults to `60`. Increase for slow environments (e.g. SSH remotes).
+
 ### `ZELLIJ_MCP_DUMP_DIR`
 
 Directory for temporary screen dump files created by `read_pane` and `read_pane_full`. Defaults to `/tmp`. Files are cleaned up automatically after reading.

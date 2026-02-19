@@ -57,10 +57,12 @@ function getExecArgs(): {
 beforeEach(() => {
   execFileMock.mockReset();
   delete process.env.ZELLIJ_MCP_SESSION;
+  delete process.env.ZELLIJ_MCP_DELAY_MS;
 });
 
 afterEach(() => {
   delete process.env.ZELLIJ_MCP_SESSION;
+  delete process.env.ZELLIJ_MCP_DELAY_MS;
 });
 
 describe("zellij", () => {
@@ -242,6 +244,41 @@ describe("zellijActionOrThrow", () => {
     await expect(zellijActionOrThrow(["query-tab-names"])).rejects.toThrow(
       /unknown error/,
     );
+  });
+
+  test("uses default 60ms delay when ZELLIJ_MCP_DELAY_MS is unset", async () => {
+    mockExecResult(null, "ok", "");
+    const start = performance.now();
+    await zellijActionOrThrow(["query-tab-names"]);
+    const elapsed = performance.now() - start;
+    expect(elapsed).toBeGreaterThanOrEqual(50);
+  });
+
+  test("respects ZELLIJ_MCP_DELAY_MS env var", async () => {
+    process.env.ZELLIJ_MCP_DELAY_MS = "0";
+    mockExecResult(null, "ok", "");
+    const start = performance.now();
+    await zellijActionOrThrow(["query-tab-names"]);
+    const elapsed = performance.now() - start;
+    expect(elapsed).toBeLessThan(50);
+  });
+
+  test("falls back to default delay for invalid ZELLIJ_MCP_DELAY_MS", async () => {
+    process.env.ZELLIJ_MCP_DELAY_MS = "not-a-number";
+    mockExecResult(null, "ok", "");
+    const start = performance.now();
+    await zellijActionOrThrow(["query-tab-names"]);
+    const elapsed = performance.now() - start;
+    expect(elapsed).toBeGreaterThanOrEqual(50);
+  });
+
+  test("falls back to default delay for negative ZELLIJ_MCP_DELAY_MS", async () => {
+    process.env.ZELLIJ_MCP_DELAY_MS = "-10";
+    mockExecResult(null, "ok", "");
+    const start = performance.now();
+    await zellijActionOrThrow(["query-tab-names"]);
+    const elapsed = performance.now() - start;
+    expect(elapsed).toBeGreaterThanOrEqual(50);
   });
 });
 

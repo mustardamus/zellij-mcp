@@ -4,7 +4,7 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 const BIN_PATH = process.env.ZELLIJ_MCP_BIN ?? "zellij";
 const DEFAULT_SESSION = "zellij-mcp";
 const DEFAULT_TIMEOUT_MS = 10_000;
-const POST_ACTION_DELAY_MS = 60;
+const DEFAULT_DELAY_MS = 60;
 
 export interface ZellijResult {
   stdout: string;
@@ -23,6 +23,13 @@ export interface ZellijOptions {
 
 function getSession(options?: ZellijOptions): string {
   return options?.session ?? process.env.ZELLIJ_MCP_SESSION ?? DEFAULT_SESSION;
+}
+
+function getDelayMs(): number {
+  const env = process.env.ZELLIJ_MCP_DELAY_MS;
+  if (env == null) return DEFAULT_DELAY_MS;
+  const parsed = Number(env);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : DEFAULT_DELAY_MS;
 }
 
 function exec(args: string[], timeout: number): Promise<ZellijResult> {
@@ -109,7 +116,7 @@ export async function zellijActionOrThrow(
     );
   }
 
-  await new Promise((resolve) => setTimeout(resolve, POST_ACTION_DELAY_MS));
+  await new Promise((resolve) => setTimeout(resolve, getDelayMs()));
 
   return result.stdout;
 }
