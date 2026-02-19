@@ -12,9 +12,10 @@ mock.module("../zellij.ts", () => ({
 const { registerSessionTools } = await import("./session.ts");
 
 interface ToolEntry {
-  handler: (
-    ...args: unknown[]
-  ) => Promise<{ content: { type: string; text: string }[] }>;
+  handler: (...args: unknown[]) => Promise<{
+    content: { type: string; text: string }[];
+    isError?: boolean;
+  }>;
 }
 
 async function callTool(name: string) {
@@ -53,11 +54,13 @@ describe("zellij_list_sessions", () => {
     });
   });
 
-  test("propagates errors from zellijRawOrThrow", async () => {
+  test("returns isError on failure", async () => {
     zellijRawOrThrowMock.mockRejectedValue(new Error("no sessions"));
-    await expect(callTool("zellij_list_sessions")).rejects.toThrow(
-      "no sessions",
-    );
+    const result = await callTool("zellij_list_sessions");
+    expect(result).toEqual({
+      content: [{ type: "text", text: "no sessions" }],
+      isError: true,
+    });
   });
 });
 
@@ -72,11 +75,13 @@ describe("zellij_query_tab_names", () => {
     });
   });
 
-  test("propagates errors from zellijActionOrThrow", async () => {
+  test("returns isError on failure", async () => {
     zellijActionOrThrowMock.mockRejectedValue(new Error("session not found"));
-    await expect(callTool("zellij_query_tab_names")).rejects.toThrow(
-      "session not found",
-    );
+    const result = await callTool("zellij_query_tab_names");
+    expect(result).toEqual({
+      content: [{ type: "text", text: "session not found" }],
+      isError: true,
+    });
   });
 });
 
@@ -92,9 +97,13 @@ describe("zellij_dump_layout", () => {
     });
   });
 
-  test("propagates errors from zellijActionOrThrow", async () => {
+  test("returns isError on failure", async () => {
     zellijActionOrThrowMock.mockRejectedValue(new Error("failed"));
-    await expect(callTool("zellij_dump_layout")).rejects.toThrow("failed");
+    const result = await callTool("zellij_dump_layout");
+    expect(result).toEqual({
+      content: [{ type: "text", text: "failed" }],
+      isError: true,
+    });
   });
 });
 
@@ -111,8 +120,12 @@ describe("zellij_list_clients", () => {
     });
   });
 
-  test("propagates errors from zellijActionOrThrow", async () => {
+  test("returns isError on failure", async () => {
     zellijActionOrThrowMock.mockRejectedValue(new Error("failed"));
-    await expect(callTool("zellij_list_clients")).rejects.toThrow("failed");
+    const result = await callTool("zellij_list_clients");
+    expect(result).toEqual({
+      content: [{ type: "text", text: "failed" }],
+      isError: true,
+    });
   });
 });

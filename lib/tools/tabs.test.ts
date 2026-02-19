@@ -14,9 +14,10 @@ mock.module("../zellij.ts", () => ({
 const { registerTabTools } = await import("./tabs.ts");
 
 interface ToolEntry {
-  handler: (
-    ...args: unknown[]
-  ) => Promise<{ content: { type: string; text: string }[] }>;
+  handler: (...args: unknown[]) => Promise<{
+    content: { type: string; text: string }[];
+    isError?: boolean;
+  }>;
 }
 
 async function callTool(name: string, args: Record<string, unknown> = {}) {
@@ -72,11 +73,13 @@ describe("zellij_go_to_tab", () => {
     ]);
   });
 
-  test("propagates errors from zellijActionOrThrow", async () => {
+  test("returns isError on failure", async () => {
     zellijActionOrThrowMock.mockRejectedValue(new Error("tab not found"));
-    await expect(
-      callTool("zellij_go_to_tab", { name: "nonexistent" }),
-    ).rejects.toThrow("tab not found");
+    const result = await callTool("zellij_go_to_tab", { name: "nonexistent" });
+    expect(result).toEqual({
+      content: [{ type: "text", text: "tab not found" }],
+      isError: true,
+    });
   });
 });
 
@@ -86,7 +89,7 @@ describe("zellij_new_tab", () => {
     await callTool("zellij_new_tab", { name: "debug" });
 
     expect(withFocusPreservationMock).toHaveBeenCalledTimes(1);
-    const [, preserve] = withFocusPreservationMock.mock.calls[0]!;
+    const preserve = withFocusPreservationMock.mock.calls[0]?.[1];
     expect(preserve).toBe(true);
   });
 
@@ -116,7 +119,7 @@ describe("zellij_new_tab", () => {
       switch_to: true,
     });
 
-    const [, preserve] = withFocusPreservationMock.mock.calls[0]!;
+    const preserve = withFocusPreservationMock.mock.calls[0]?.[1];
     expect(preserve).toBe(false);
     expect(result).toEqual({
       content: [
@@ -194,11 +197,13 @@ describe("zellij_new_tab", () => {
     ]);
   });
 
-  test("propagates errors from zellijActionOrThrow", async () => {
+  test("returns isError on failure", async () => {
     zellijActionOrThrowMock.mockRejectedValue(new Error("layout not found"));
-    await expect(
-      callTool("zellij_new_tab", { layout: "bad.kdl" }),
-    ).rejects.toThrow("layout not found");
+    const result = await callTool("zellij_new_tab", { layout: "bad.kdl" });
+    expect(result).toEqual({
+      content: [{ type: "text", text: "layout not found" }],
+      isError: true,
+    });
   });
 });
 
@@ -231,15 +236,15 @@ describe("zellij_rename_tab", () => {
 
     expect(getFocusedTabNameMock).toHaveBeenCalledTimes(1);
     expect(zellijActionOrThrowMock).toHaveBeenCalledTimes(3);
-    expect(zellijActionOrThrowMock.mock.calls[0]![0]).toEqual([
+    expect(zellijActionOrThrowMock.mock.calls[0]?.[0]).toEqual([
       "go-to-tab-name",
       "server",
     ]);
-    expect(zellijActionOrThrowMock.mock.calls[1]![0]).toEqual([
+    expect(zellijActionOrThrowMock.mock.calls[1]?.[0]).toEqual([
       "rename-tab",
       "new-name",
     ]);
-    expect(zellijActionOrThrowMock.mock.calls[2]![0]).toEqual([
+    expect(zellijActionOrThrowMock.mock.calls[2]?.[0]).toEqual([
       "go-to-tab-name",
       "editor",
     ]);
@@ -274,11 +279,13 @@ describe("zellij_rename_tab", () => {
     expect(zellijActionOrThrowMock).toHaveBeenCalledTimes(2);
   });
 
-  test("propagates errors from zellijActionOrThrow", async () => {
+  test("returns isError on failure", async () => {
     zellijActionOrThrowMock.mockRejectedValue(new Error("no focused tab"));
-    await expect(
-      callTool("zellij_rename_tab", { name: "test" }),
-    ).rejects.toThrow("no focused tab");
+    const result = await callTool("zellij_rename_tab", { name: "test" });
+    expect(result).toEqual({
+      content: [{ type: "text", text: "no focused tab" }],
+      isError: true,
+    });
   });
 });
 
@@ -301,12 +308,12 @@ describe("zellij_close_tab", () => {
 
     expect(getFocusedTabNameMock).toHaveBeenCalledTimes(1);
     expect(zellijActionOrThrowMock).toHaveBeenCalledTimes(3);
-    expect(zellijActionOrThrowMock.mock.calls[0]![0]).toEqual([
+    expect(zellijActionOrThrowMock.mock.calls[0]?.[0]).toEqual([
       "go-to-tab-name",
       "server",
     ]);
-    expect(zellijActionOrThrowMock.mock.calls[1]![0]).toEqual(["close-tab"]);
-    expect(zellijActionOrThrowMock.mock.calls[2]![0]).toEqual([
+    expect(zellijActionOrThrowMock.mock.calls[1]?.[0]).toEqual(["close-tab"]);
+    expect(zellijActionOrThrowMock.mock.calls[2]?.[0]).toEqual([
       "go-to-tab-name",
       "editor",
     ]);
@@ -335,12 +342,14 @@ describe("zellij_close_tab", () => {
     expect(zellijActionOrThrowMock).toHaveBeenCalledTimes(2);
   });
 
-  test("propagates errors from zellijActionOrThrow", async () => {
+  test("returns isError on failure", async () => {
     zellijActionOrThrowMock.mockRejectedValue(
       new Error("cannot close last tab"),
     );
-    await expect(callTool("zellij_close_tab")).rejects.toThrow(
-      "cannot close last tab",
-    );
+    const result = await callTool("zellij_close_tab");
+    expect(result).toEqual({
+      content: [{ type: "text", text: "cannot close last tab" }],
+      isError: true,
+    });
   });
 });

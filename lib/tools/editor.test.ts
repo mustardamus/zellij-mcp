@@ -10,9 +10,10 @@ mock.module("../zellij.ts", () => ({
 const { registerEditorTools } = await import("./editor.ts");
 
 interface ToolEntry {
-  handler: (
-    ...args: unknown[]
-  ) => Promise<{ content: { type: string; text: string }[] }>;
+  handler: (...args: unknown[]) => Promise<{
+    content: { type: string; text: string }[];
+    isError?: boolean;
+  }>;
 }
 
 async function callTool(name: string, args: Record<string, unknown> = {}) {
@@ -189,10 +190,12 @@ describe("zellij_edit_file", () => {
     });
   });
 
-  test("propagates errors from zellijActionOrThrow", async () => {
+  test("returns isError on failure", async () => {
     zellijActionOrThrowMock.mockRejectedValue(new Error("edit failed"));
-    await expect(
-      callTool("zellij_edit_file", { file: "missing.txt" }),
-    ).rejects.toThrow("edit failed");
+    const result = await callTool("zellij_edit_file", { file: "missing.txt" });
+    expect(result).toEqual({
+      content: [{ type: "text", text: "edit failed" }],
+      isError: true,
+    });
   });
 });

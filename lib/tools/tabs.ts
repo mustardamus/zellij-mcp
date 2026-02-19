@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
   getFocusedTabName,
+  safeTool,
   withFocusPreservation,
   zellijActionOrThrow,
 } from "../zellij.ts";
@@ -26,12 +27,13 @@ export function registerTabTools(server: McpServer) {
           ),
       },
     },
-    async ({ name }) => {
-      await zellijActionOrThrow(["go-to-tab-name", name]);
-      return {
-        content: [{ type: "text", text: `Switched to tab "${name}".` }],
-      };
-    },
+    async ({ name }) =>
+      safeTool(async () => {
+        await zellijActionOrThrow(["go-to-tab-name", name]);
+        return {
+          content: [{ type: "text", text: `Switched to tab "${name}".` }],
+        };
+      }),
   );
 
   server.registerTool(
@@ -65,37 +67,38 @@ export function registerTabTools(server: McpServer) {
           ),
       },
     },
-    async ({ name, layout, cwd, switch_to }) => {
-      const perform = async () => {
-        const args: string[] = ["new-tab"];
+    async ({ name, layout, cwd, switch_to }) =>
+      safeTool(async () => {
+        const perform = async () => {
+          const args: string[] = ["new-tab"];
 
-        if (name) {
-          args.push("--name", name);
-        }
+          if (name) {
+            args.push("--name", name);
+          }
 
-        if (layout) {
-          args.push("--layout", layout);
-        }
+          if (layout) {
+            args.push("--layout", layout);
+          }
 
-        if (cwd) {
-          args.push("--cwd", cwd);
-        }
+          if (cwd) {
+            args.push("--cwd", cwd);
+          }
 
-        await zellijActionOrThrow(args);
-      };
+          await zellijActionOrThrow(args);
+        };
 
-      await withFocusPreservation(perform, !switch_to);
+        await withFocusPreservation(perform, !switch_to);
 
-      const label = name ? `"${name}"` : "(unnamed)";
-      const focusNote = switch_to
-        ? "and switched to it"
-        : "(focus preserved on original tab)";
-      return {
-        content: [
-          { type: "text", text: `Created new tab ${label} ${focusNote}.` },
-        ],
-      };
-    },
+        const label = name ? `"${name}"` : "(unnamed)";
+        const focusNote = switch_to
+          ? "and switched to it"
+          : "(focus preserved on original tab)";
+        return {
+          content: [
+            { type: "text", text: `Created new tab ${label} ${focusNote}.` },
+          ],
+        };
+      }),
   );
 
   server.registerTool(
@@ -116,28 +119,31 @@ export function registerTabTools(server: McpServer) {
           ),
       },
     },
-    async ({ name, target }) => {
-      if (target) {
-        const focusedTab = await getFocusedTabName();
-        await zellijActionOrThrow(["go-to-tab-name", target]);
-        await zellijActionOrThrow(["rename-tab", name]);
+    async ({ name, target }) =>
+      safeTool(async () => {
+        if (target) {
+          const focusedTab = await getFocusedTabName();
+          await zellijActionOrThrow(["go-to-tab-name", target]);
+          await zellijActionOrThrow(["rename-tab", name]);
 
-        if (focusedTab && focusedTab !== target) {
-          await zellijActionOrThrow(["go-to-tab-name", focusedTab]);
+          if (focusedTab && focusedTab !== target) {
+            await zellijActionOrThrow(["go-to-tab-name", focusedTab]);
+          }
+
+          return {
+            content: [
+              { type: "text", text: `Renamed tab "${target}" to "${name}".` },
+            ],
+          };
         }
 
+        await zellijActionOrThrow(["rename-tab", name]);
         return {
           content: [
-            { type: "text", text: `Renamed tab "${target}" to "${name}".` },
+            { type: "text", text: `Renamed focused tab to "${name}".` },
           ],
         };
-      }
-
-      await zellijActionOrThrow(["rename-tab", name]);
-      return {
-        content: [{ type: "text", text: `Renamed focused tab to "${name}".` }],
-      };
-    },
+      }),
   );
 
   server.registerTool(
@@ -163,23 +169,26 @@ export function registerTabTools(server: McpServer) {
           ),
       },
     },
-    async ({ target }) => {
-      if (target) {
-        const focusedTab = await getFocusedTabName();
-        await zellijActionOrThrow(["go-to-tab-name", target]);
-        await zellijActionOrThrow(["close-tab"]);
+    async ({ target }) =>
+      safeTool(async () => {
+        if (target) {
+          const focusedTab = await getFocusedTabName();
+          await zellijActionOrThrow(["go-to-tab-name", target]);
+          await zellijActionOrThrow(["close-tab"]);
 
-        if (focusedTab && focusedTab !== target) {
-          await zellijActionOrThrow(["go-to-tab-name", focusedTab]);
+          if (focusedTab && focusedTab !== target) {
+            await zellijActionOrThrow(["go-to-tab-name", focusedTab]);
+          }
+
+          return {
+            content: [{ type: "text", text: `Closed tab "${target}".` }],
+          };
         }
 
+        await zellijActionOrThrow(["close-tab"]);
         return {
-          content: [{ type: "text", text: `Closed tab "${target}".` }],
+          content: [{ type: "text", text: "Closed the focused tab." }],
         };
-      }
-
-      await zellijActionOrThrow(["close-tab"]);
-      return { content: [{ type: "text", text: "Closed the focused tab." }] };
-    },
+      }),
   );
 }

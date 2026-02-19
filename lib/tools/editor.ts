@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { zellijActionOrThrow } from "../zellij.ts";
+import { safeTool, zellijActionOrThrow } from "../zellij.ts";
 
 export function registerEditorTools(server: McpServer) {
   server.registerTool(
@@ -51,39 +51,40 @@ export function registerEditorTools(server: McpServer) {
           ),
       },
     },
-    async ({ file, floating, line_number, direction, cwd }) => {
-      const args: string[] = ["edit"];
+    async ({ file, floating, line_number, direction, cwd }) =>
+      safeTool(async () => {
+        const args: string[] = ["edit"];
 
-      if (floating) {
-        args.push("--floating");
-      }
+        if (floating) {
+          args.push("--floating");
+        }
 
-      if (direction && !floating) {
-        args.push("--direction", direction);
-      }
+        if (direction && !floating) {
+          args.push("--direction", direction);
+        }
 
-      if (cwd) {
-        args.push("--cwd", cwd);
-      }
+        if (cwd) {
+          args.push("--cwd", cwd);
+        }
 
-      if (line_number) {
-        args.push("--line-number", String(line_number));
-      }
+        if (line_number) {
+          args.push("--line-number", String(line_number));
+        }
 
-      args.push(file);
+        args.push(file);
 
-      await zellijActionOrThrow(args);
+        await zellijActionOrThrow(args);
 
-      const style = floating ? "floating" : "tiled";
-      const lineInfo = line_number ? ` at line ${line_number}` : "";
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Opened "${file}"${lineInfo} in $EDITOR in a new ${style} pane.`,
-          },
-        ],
-      };
-    },
+        const style = floating ? "floating" : "tiled";
+        const lineInfo = line_number ? ` at line ${line_number}` : "";
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Opened "${file}"${lineInfo} in $EDITOR in a new ${style} pane.`,
+            },
+          ],
+        };
+      }),
   );
 }

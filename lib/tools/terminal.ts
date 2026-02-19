@@ -4,6 +4,7 @@ import { join } from "node:path";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
+  safeTool,
   withFocusPreservation,
   zellij,
   zellijActionOrThrow,
@@ -58,24 +59,25 @@ export function registerTerminalTools(server: McpServer) {
           ),
       },
     },
-    async ({ chars, enter }) => {
-      const sendEnter = enter !== false;
+    async ({ chars, enter }) =>
+      safeTool(async () => {
+        const sendEnter = enter !== false;
 
-      await zellijActionOrThrow(["write-chars", chars]);
+        await zellijActionOrThrow(["write-chars", chars]);
 
-      if (sendEnter) {
-        await zellijActionOrThrow(["write", "13"]);
-      }
+        if (sendEnter) {
+          await zellijActionOrThrow(["write", "13"]);
+        }
 
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Sent ${chars.length} character(s) to the focused pane${sendEnter ? " (followed by Enter)" : ""}.`,
-          },
-        ],
-      };
-    },
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Sent ${chars.length} character(s) to the focused pane${sendEnter ? " (followed by Enter)" : ""}.`,
+            },
+          ],
+        };
+      }),
   );
 
   server.registerTool(
@@ -92,10 +94,11 @@ export function registerTerminalTools(server: McpServer) {
         readOnlyHint: true,
       },
     },
-    async () => {
-      const content = await dumpScreen(false);
-      return { content: [{ type: "text", text: content }] };
-    },
+    async () =>
+      safeTool(async () => {
+        const content = await dumpScreen(false);
+        return { content: [{ type: "text", text: content }] };
+      }),
   );
 
   server.registerTool(
@@ -113,10 +116,11 @@ export function registerTerminalTools(server: McpServer) {
         readOnlyHint: true,
       },
     },
-    async () => {
-      const content = await dumpScreen(true);
-      return { content: [{ type: "text", text: content }] };
-    },
+    async () =>
+      safeTool(async () => {
+        const content = await dumpScreen(true);
+        return { content: [{ type: "text", text: content }] };
+      }),
   );
 
   server.registerTool(
@@ -160,51 +164,54 @@ export function registerTerminalTools(server: McpServer) {
           ),
       },
     },
-    async ({ command, floating, name, close_on_exit, cwd, switch_to }) => {
-      const perform = async () => {
-        const args: string[] = ["run"];
+    async ({ command, floating, name, close_on_exit, cwd, switch_to }) =>
+      safeTool(async () => {
+        const perform = async () => {
+          const args: string[] = ["run"];
 
-        if (floating) {
-          args.push("--floating");
-        }
+          if (floating) {
+            args.push("--floating");
+          }
 
-        if (name) {
-          args.push("--name", name);
-        }
+          if (name) {
+            args.push("--name", name);
+          }
 
-        if (close_on_exit) {
-          args.push("--close-on-exit");
-        }
+          if (close_on_exit) {
+            args.push("--close-on-exit");
+          }
 
-        if (cwd) {
-          args.push("--cwd", cwd);
-        }
+          if (cwd) {
+            args.push("--cwd", cwd);
+          }
 
-        args.push("--", ...command);
+          args.push("--", ...command);
 
-        const result = await zellij(args);
+          const result = await zellij(args);
 
-        if (result.exitCode !== 0) {
-          const detail = result.stderr || result.stdout || "unknown error";
-          throw new Error(
-            `zellij run failed (exit ${result.exitCode}): ${detail}`,
-          );
-        }
-      };
+          if (result.exitCode !== 0) {
+            const detail = result.stderr || result.stdout || "unknown error";
+            throw new Error(
+              `zellij run failed (exit ${result.exitCode}): ${detail}`,
+            );
+          }
+        };
 
-      await withFocusPreservation(perform, !switch_to);
+        await withFocusPreservation(perform, !switch_to);
 
-      const label = name ? `"${name}"` : "(unnamed)";
-      const style = floating ? "floating" : "tiled";
-      const focusNote = switch_to ? "" : " (focus preserved on original pane)";
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Started command in new ${style} pane ${label}: ${command.join(" ")}${focusNote}`,
-          },
-        ],
-      };
-    },
+        const label = name ? `"${name}"` : "(unnamed)";
+        const style = floating ? "floating" : "tiled";
+        const focusNote = switch_to
+          ? ""
+          : " (focus preserved on original pane)";
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Started command in new ${style} pane ${label}: ${command.join(" ")}${focusNote}`,
+            },
+          ],
+        };
+      }),
   );
 }

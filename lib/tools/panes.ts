@@ -1,6 +1,10 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { withFocusPreservation, zellijActionOrThrow } from "../zellij.ts";
+import {
+  safeTool,
+  withFocusPreservation,
+  zellijActionOrThrow,
+} from "../zellij.ts";
 
 export function registerPaneTools(server: McpServer) {
   server.registerTool(
@@ -47,47 +51,50 @@ export function registerPaneTools(server: McpServer) {
           ),
       },
     },
-    async ({ floating, name, direction, cwd, command, switch_to }) => {
-      const perform = async () => {
-        const args: string[] = ["new-pane"];
+    async ({ floating, name, direction, cwd, command, switch_to }) =>
+      safeTool(async () => {
+        const perform = async () => {
+          const args: string[] = ["new-pane"];
 
-        if (floating) {
-          args.push("--floating");
-        }
+          if (floating) {
+            args.push("--floating");
+          }
 
-        if (name) {
-          args.push("--name", name);
-        }
+          if (name) {
+            args.push("--name", name);
+          }
 
-        if (direction && !floating) {
-          args.push("--direction", direction);
-        }
+          if (direction && !floating) {
+            args.push("--direction", direction);
+          }
 
-        if (cwd) {
-          args.push("--cwd", cwd);
-        }
+          if (cwd) {
+            args.push("--cwd", cwd);
+          }
 
-        if (command && command.length > 0) {
-          args.push("--", ...command);
-        }
+          if (command && command.length > 0) {
+            args.push("--", ...command);
+          }
 
-        await zellijActionOrThrow(args);
-      };
+          await zellijActionOrThrow(args);
+        };
 
-      await withFocusPreservation(perform, !switch_to);
+        await withFocusPreservation(perform, !switch_to);
 
-      const label = name ? `"${name}"` : "(unnamed)";
-      const style = floating ? "floating" : "tiled";
-      const focusNote = switch_to ? "" : " (focus preserved on original pane)";
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Opened new ${style} pane ${label}${focusNote}.`,
-          },
-        ],
-      };
-    },
+        const label = name ? `"${name}"` : "(unnamed)";
+        const style = floating ? "floating" : "tiled";
+        const focusNote = switch_to
+          ? ""
+          : " (focus preserved on original pane)";
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Opened new ${style} pane ${label}${focusNote}.`,
+            },
+          ],
+        };
+      }),
   );
 
   server.registerTool(
@@ -104,12 +111,13 @@ export function registerPaneTools(server: McpServer) {
         destructiveHint: true,
       },
     },
-    async () => {
-      await zellijActionOrThrow(["close-pane"]);
-      return {
-        content: [{ type: "text", text: "Closed the focused pane." }],
-      };
-    },
+    async () =>
+      safeTool(async () => {
+        await zellijActionOrThrow(["close-pane"]);
+        return {
+          content: [{ type: "text", text: "Closed the focused pane." }],
+        };
+      }),
   );
 
   server.registerTool(
@@ -129,12 +137,13 @@ export function registerPaneTools(server: McpServer) {
           ),
       },
     },
-    async ({ direction }) => {
-      await zellijActionOrThrow(["move-focus", direction]);
-      return {
-        content: [{ type: "text", text: `Moved focus ${direction}.` }],
-      };
-    },
+    async ({ direction }) =>
+      safeTool(async () => {
+        await zellijActionOrThrow(["move-focus", direction]);
+        return {
+          content: [{ type: "text", text: `Moved focus ${direction}.` }],
+        };
+      }),
   );
 
   server.registerTool(
@@ -150,12 +159,13 @@ export function registerPaneTools(server: McpServer) {
         idempotentHint: false,
       },
     },
-    async () => {
-      await zellijActionOrThrow(["toggle-floating-panes"]);
-      return {
-        content: [{ type: "text", text: "Toggled floating panes." }],
-      };
-    },
+    async () =>
+      safeTool(async () => {
+        await zellijActionOrThrow(["toggle-floating-panes"]);
+        return {
+          content: [{ type: "text", text: "Toggled floating panes." }],
+        };
+      }),
   );
 
   server.registerTool(
@@ -172,14 +182,18 @@ export function registerPaneTools(server: McpServer) {
         idempotentHint: false,
       },
     },
-    async () => {
-      await zellijActionOrThrow(["toggle-fullscreen"]);
-      return {
-        content: [
-          { type: "text", text: "Toggled fullscreen on the focused pane." },
-        ],
-      };
-    },
+    async () =>
+      safeTool(async () => {
+        await zellijActionOrThrow(["toggle-fullscreen"]);
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Toggled fullscreen on the focused pane.",
+            },
+          ],
+        };
+      }),
   );
 
   server.registerTool(
@@ -197,12 +211,15 @@ export function registerPaneTools(server: McpServer) {
           .describe("The new name for the currently focused pane."),
       },
     },
-    async ({ name }) => {
-      await zellijActionOrThrow(["rename-pane", name]);
-      return {
-        content: [{ type: "text", text: `Renamed focused pane to "${name}".` }],
-      };
-    },
+    async ({ name }) =>
+      safeTool(async () => {
+        await zellijActionOrThrow(["rename-pane", name]);
+        return {
+          content: [
+            { type: "text", text: `Renamed focused pane to "${name}".` },
+          ],
+        };
+      }),
   );
 
   server.registerTool(
@@ -223,16 +240,17 @@ export function registerPaneTools(server: McpServer) {
           ),
       },
     },
-    async ({ direction }) => {
-      await zellijActionOrThrow(["resize", direction]);
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Resized focused pane ${direction}.`,
-          },
-        ],
-      };
-    },
+    async ({ direction }) =>
+      safeTool(async () => {
+        await zellijActionOrThrow(["resize", direction]);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Resized focused pane ${direction}.`,
+            },
+          ],
+        };
+      }),
   );
 }

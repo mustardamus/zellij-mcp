@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
 const BIN_PATH = process.env.ZELLIJ_MCP_BIN ?? "zellij";
 const DEFAULT_SESSION = "zellij-mcp";
@@ -164,6 +165,26 @@ export async function getFocusedTabName(
  *
  * If `preserve` is false: just runs the action (raw Zellij behavior).
  */
+/**
+ * Wraps a tool callback so that any thrown error is caught and returned
+ * as an MCP-level error response (`isError: true`) instead of bubbling
+ * up as a protocol-level exception.  This lets the LLM see the error
+ * message and self-correct.
+ */
+export async function safeTool(
+  fn: () => Promise<CallToolResult>,
+): Promise<CallToolResult> {
+  try {
+    return await fn();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      content: [{ type: "text", text: message }],
+      isError: true,
+    };
+  }
+}
+
 export async function withFocusPreservation<T>(
   action: () => Promise<T>,
   preserve: boolean,

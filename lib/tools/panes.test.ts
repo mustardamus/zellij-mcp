@@ -12,9 +12,10 @@ mock.module("../zellij.ts", () => ({
 const { registerPaneTools } = await import("./panes.ts");
 
 interface ToolEntry {
-  handler: (
-    ...args: unknown[]
-  ) => Promise<{ content: { type: string; text: string }[] }>;
+  handler: (...args: unknown[]) => Promise<{
+    content: { type: string; text: string }[];
+    isError?: boolean;
+  }>;
 }
 
 async function callTool(name: string, args: Record<string, unknown> = {}) {
@@ -50,7 +51,7 @@ describe("zellij_new_pane", () => {
     await callTool("zellij_new_pane", {});
 
     expect(withFocusPreservationMock).toHaveBeenCalledTimes(1);
-    const [, preserve] = withFocusPreservationMock.mock.calls[0]!;
+    const preserve = withFocusPreservationMock.mock.calls[0]?.[1];
     expect(preserve).toBe(true);
   });
 
@@ -58,7 +59,7 @@ describe("zellij_new_pane", () => {
     zellijActionOrThrowMock.mockResolvedValue("");
     await callTool("zellij_new_pane", { switch_to: true });
 
-    const [, preserve] = withFocusPreservationMock.mock.calls[0]!;
+    const preserve = withFocusPreservationMock.mock.calls[0]?.[1];
     expect(preserve).toBe(false);
   });
 
@@ -179,11 +180,13 @@ describe("zellij_new_pane", () => {
     });
   });
 
-  test("propagates errors from zellijActionOrThrow", async () => {
+  test("returns isError on failure", async () => {
     zellijActionOrThrowMock.mockRejectedValue(new Error("new-pane failed"));
-    await expect(callTool("zellij_new_pane", {})).rejects.toThrow(
-      "new-pane failed",
-    );
+    const result = await callTool("zellij_new_pane", {});
+    expect(result).toEqual({
+      content: [{ type: "text", text: "new-pane failed" }],
+      isError: true,
+    });
   });
 });
 
@@ -198,11 +201,13 @@ describe("zellij_close_pane", () => {
     });
   });
 
-  test("propagates errors from zellijActionOrThrow", async () => {
+  test("returns isError on failure", async () => {
     zellijActionOrThrowMock.mockRejectedValue(new Error("close-pane failed"));
-    await expect(callTool("zellij_close_pane")).rejects.toThrow(
-      "close-pane failed",
-    );
+    const result = await callTool("zellij_close_pane");
+    expect(result).toEqual({
+      content: [{ type: "text", text: "close-pane failed" }],
+      isError: true,
+    });
   });
 });
 
@@ -231,11 +236,13 @@ describe("zellij_focus_pane", () => {
     }
   });
 
-  test("propagates errors from zellijActionOrThrow", async () => {
+  test("returns isError on failure", async () => {
     zellijActionOrThrowMock.mockRejectedValue(new Error("move-focus failed"));
-    await expect(
-      callTool("zellij_focus_pane", { direction: "down" }),
-    ).rejects.toThrow("move-focus failed");
+    const result = await callTool("zellij_focus_pane", { direction: "down" });
+    expect(result).toEqual({
+      content: [{ type: "text", text: "move-focus failed" }],
+      isError: true,
+    });
   });
 });
 
@@ -252,13 +259,15 @@ describe("zellij_toggle_floating_panes", () => {
     });
   });
 
-  test("propagates errors from zellijActionOrThrow", async () => {
+  test("returns isError on failure", async () => {
     zellijActionOrThrowMock.mockRejectedValue(
       new Error("toggle-floating failed"),
     );
-    await expect(callTool("zellij_toggle_floating_panes")).rejects.toThrow(
-      "toggle-floating failed",
-    );
+    const result = await callTool("zellij_toggle_floating_panes");
+    expect(result).toEqual({
+      content: [{ type: "text", text: "toggle-floating failed" }],
+      isError: true,
+    });
   });
 });
 
@@ -275,13 +284,15 @@ describe("zellij_toggle_fullscreen", () => {
     });
   });
 
-  test("propagates errors from zellijActionOrThrow", async () => {
+  test("returns isError on failure", async () => {
     zellijActionOrThrowMock.mockRejectedValue(
       new Error("toggle-fullscreen failed"),
     );
-    await expect(callTool("zellij_toggle_fullscreen")).rejects.toThrow(
-      "toggle-fullscreen failed",
-    );
+    const result = await callTool("zellij_toggle_fullscreen");
+    expect(result).toEqual({
+      content: [{ type: "text", text: "toggle-fullscreen failed" }],
+      isError: true,
+    });
   });
 });
 
@@ -299,11 +310,13 @@ describe("zellij_rename_pane", () => {
     });
   });
 
-  test("propagates errors from zellijActionOrThrow", async () => {
+  test("returns isError on failure", async () => {
     zellijActionOrThrowMock.mockRejectedValue(new Error("rename-pane failed"));
-    await expect(
-      callTool("zellij_rename_pane", { name: "test" }),
-    ).rejects.toThrow("rename-pane failed");
+    const result = await callTool("zellij_rename_pane", { name: "test" });
+    expect(result).toEqual({
+      content: [{ type: "text", text: "rename-pane failed" }],
+      isError: true,
+    });
   });
 });
 
@@ -336,10 +349,12 @@ describe("zellij_resize_pane", () => {
     }
   });
 
-  test("propagates errors from zellijActionOrThrow", async () => {
+  test("returns isError on failure", async () => {
     zellijActionOrThrowMock.mockRejectedValue(new Error("resize failed"));
-    await expect(
-      callTool("zellij_resize_pane", { direction: "left" }),
-    ).rejects.toThrow("resize failed");
+    const result = await callTool("zellij_resize_pane", { direction: "left" });
+    expect(result).toEqual({
+      content: [{ type: "text", text: "resize failed" }],
+      isError: true,
+    });
   });
 });

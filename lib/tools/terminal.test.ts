@@ -22,9 +22,10 @@ mock.module("node:fs/promises", () => ({
 const { registerTerminalTools } = await import("./terminal.ts");
 
 interface ToolEntry {
-  handler: (
-    ...args: unknown[]
-  ) => Promise<{ content: { type: string; text: string }[] }>;
+  handler: (...args: unknown[]) => Promise<{
+    content: { type: string; text: string }[];
+    isError?: boolean;
+  }>;
 }
 
 async function callTool(name: string, args: Record<string, unknown> = {}) {
@@ -145,20 +146,24 @@ describe("zellij_write_to_pane", () => {
     });
   });
 
-  test("propagates errors from write-chars", async () => {
+  test("returns isError on write-chars failure", async () => {
     zellijActionOrThrowMock.mockRejectedValue(new Error("write failed"));
-    await expect(
-      callTool("zellij_write_to_pane", { chars: "test" }),
-    ).rejects.toThrow("write failed");
+    const result = await callTool("zellij_write_to_pane", { chars: "test" });
+    expect(result).toEqual({
+      content: [{ type: "text", text: "write failed" }],
+      isError: true,
+    });
   });
 
-  test("propagates errors from write 13", async () => {
+  test("returns isError on write 13 failure", async () => {
     zellijActionOrThrowMock
       .mockResolvedValueOnce("")
       .mockRejectedValueOnce(new Error("enter failed"));
-    await expect(
-      callTool("zellij_write_to_pane", { chars: "test" }),
-    ).rejects.toThrow("enter failed");
+    const result = await callTool("zellij_write_to_pane", { chars: "test" });
+    expect(result).toEqual({
+      content: [{ type: "text", text: "enter failed" }],
+      isError: true,
+    });
   });
 });
 
@@ -173,7 +178,7 @@ describe("zellij_read_pane", () => {
     expect(zellijActionOrThrowMock).toHaveBeenCalledTimes(1);
     const call = zellijActionOrThrowMock.mock.calls[0];
     expect(call).toBeDefined();
-    const callArgs = call![0] as string[];
+    const callArgs = call?.[0] as string[];
     expect(callArgs[0]).toBe("dump-screen");
     expect(callArgs).toHaveLength(2);
     expect(callArgs[1]).toMatch(/^\/tmp\/zellij-mcp-dump-[0-9a-f-]{36}\.txt$/);
@@ -186,12 +191,16 @@ describe("zellij_read_pane", () => {
     });
   });
 
-  test("cleans up temp file even if readFile fails", async () => {
+  test("returns isError when readFile fails (still cleans up temp file)", async () => {
     zellijActionOrThrowMock.mockResolvedValue("");
     readFileMock.mockRejectedValue(new Error("read failed"));
     unlinkMock.mockResolvedValue(undefined);
 
-    await expect(callTool("zellij_read_pane")).rejects.toThrow("read failed");
+    const result = await callTool("zellij_read_pane");
+    expect(result).toEqual({
+      content: [{ type: "text", text: "read failed" }],
+      isError: true,
+    });
     expect(unlinkMock).toHaveBeenCalledTimes(1);
   });
 
@@ -219,7 +228,7 @@ describe("zellij_read_pane", () => {
 
       const call = zellijActionOrThrowMock.mock.calls[0];
       expect(call).toBeDefined();
-      const callArgs = call![0] as string[];
+      const callArgs = call?.[0] as string[];
       expect(callArgs[1]).toMatch(
         /^\/custom\/dump\/dir\/zellij-mcp-dump-[0-9a-f-]{36}\.txt$/,
       );
@@ -245,7 +254,7 @@ describe("zellij_read_pane", () => {
 
       const call = zellijActionOrThrowMock.mock.calls[0];
       expect(call).toBeDefined();
-      const callArgs = call![0] as string[];
+      const callArgs = call?.[0] as string[];
       expect(callArgs[1]).toMatch(
         /^\/tmp\/zellij-mcp-dump-[0-9a-f-]{36}\.txt$/,
       );
@@ -256,9 +265,13 @@ describe("zellij_read_pane", () => {
     }
   });
 
-  test("propagates errors from zellijActionOrThrow", async () => {
+  test("returns isError on zellijActionOrThrow failure", async () => {
     zellijActionOrThrowMock.mockRejectedValue(new Error("dump failed"));
-    await expect(callTool("zellij_read_pane")).rejects.toThrow("dump failed");
+    const result = await callTool("zellij_read_pane");
+    expect(result).toEqual({
+      content: [{ type: "text", text: "dump failed" }],
+      isError: true,
+    });
   });
 });
 
@@ -273,7 +286,7 @@ describe("zellij_read_pane_full", () => {
     expect(zellijActionOrThrowMock).toHaveBeenCalledTimes(1);
     const call = zellijActionOrThrowMock.mock.calls[0];
     expect(call).toBeDefined();
-    const callArgs = call![0] as string[];
+    const callArgs = call?.[0] as string[];
     expect(callArgs[0]).toBe("dump-screen");
     expect(callArgs[1]).toBe("--full");
     expect(callArgs).toHaveLength(3);
@@ -287,11 +300,13 @@ describe("zellij_read_pane_full", () => {
     });
   });
 
-  test("propagates errors from zellijActionOrThrow", async () => {
+  test("returns isError on zellijActionOrThrow failure", async () => {
     zellijActionOrThrowMock.mockRejectedValue(new Error("dump failed"));
-    await expect(callTool("zellij_read_pane_full")).rejects.toThrow(
-      "dump failed",
-    );
+    const result = await callTool("zellij_read_pane_full");
+    expect(result).toEqual({
+      content: [{ type: "text", text: "dump failed" }],
+      isError: true,
+    });
   });
 });
 
@@ -301,7 +316,7 @@ describe("zellij_run_command", () => {
     await callTool("zellij_run_command", { command: ["npm", "test"] });
 
     expect(withFocusPreservationMock).toHaveBeenCalledTimes(1);
-    const [, preserve] = withFocusPreservationMock.mock.calls[0]!;
+    const preserve = withFocusPreservationMock.mock.calls[0]?.[1];
     expect(preserve).toBe(true);
   });
 
@@ -312,7 +327,7 @@ describe("zellij_run_command", () => {
       switch_to: true,
     });
 
-    const [, preserve] = withFocusPreservationMock.mock.calls[0]!;
+    const preserve = withFocusPreservationMock.mock.calls[0]?.[1];
     expect(preserve).toBe(false);
   });
 
@@ -426,27 +441,40 @@ describe("zellij_run_command", () => {
     });
   });
 
-  test("throws on non-zero exit code", async () => {
+  test("returns isError on non-zero exit code", async () => {
     zellijMock.mockResolvedValue({
       stdout: "",
       stderr: "command not found",
       exitCode: 1,
     });
 
-    await expect(
-      callTool("zellij_run_command", { command: ["nonexistent"] }),
-    ).rejects.toThrow("zellij run failed (exit 1): command not found");
+    const result = await callTool("zellij_run_command", {
+      command: ["nonexistent"],
+    });
+    expect(result).toEqual({
+      content: [
+        {
+          type: "text",
+          text: "zellij run failed (exit 1): command not found",
+        },
+      ],
+      isError: true,
+    });
   });
 
-  test("uses stdout when stderr is empty on error", async () => {
+  test("returns isError using stdout when stderr is empty on error", async () => {
     zellijMock.mockResolvedValue({
       stdout: "some output",
       stderr: "",
       exitCode: 1,
     });
 
-    await expect(
-      callTool("zellij_run_command", { command: ["bad"] }),
-    ).rejects.toThrow("zellij run failed (exit 1): some output");
+    const result = await callTool("zellij_run_command", { command: ["bad"] });
+    expect(result).toEqual({
+      content: [
+        { type: "text", text: "zellij run failed (exit 1): some output" },
+      ],
+      isError: true,
+    });
   });
 });

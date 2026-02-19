@@ -1,5 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { zellijActionOrThrow, zellijRawOrThrow } from "../zellij.ts";
+import { safeTool, zellijActionOrThrow, zellijRawOrThrow } from "../zellij.ts";
 
 export function registerSessionTools(server: McpServer) {
   server.registerTool(
@@ -11,15 +11,16 @@ export function registerSessionTools(server: McpServer) {
         readOnlyHint: true,
       },
     },
-    async () => {
-      const stdout = await zellijRawOrThrow([
-        "list-sessions",
-        "--short",
-        "--no-formatting",
-      ]);
+    async () =>
+      safeTool(async () => {
+        const stdout = await zellijRawOrThrow([
+          "list-sessions",
+          "--short",
+          "--no-formatting",
+        ]);
 
-      return { content: [{ type: "text", text: stdout }] };
-    },
+        return { content: [{ type: "text", text: stdout }] };
+      }),
   );
 
   server.registerTool(
@@ -34,10 +35,11 @@ export function registerSessionTools(server: McpServer) {
         readOnlyHint: true,
       },
     },
-    async () => {
-      const stdout = await zellijActionOrThrow(["query-tab-names"]);
-      return { content: [{ type: "text", text: stdout }] };
-    },
+    async () =>
+      safeTool(async () => {
+        const stdout = await zellijActionOrThrow(["query-tab-names"]);
+        return { content: [{ type: "text", text: stdout }] };
+      }),
   );
 
   server.registerTool(
@@ -52,10 +54,11 @@ export function registerSessionTools(server: McpServer) {
         readOnlyHint: true,
       },
     },
-    async () => {
-      const stdout = await zellijActionOrThrow(["dump-layout"]);
-      return { content: [{ type: "text", text: stdout }] };
-    },
+    async () =>
+      safeTool(async () => {
+        const stdout = await zellijActionOrThrow(["dump-layout"]);
+        return { content: [{ type: "text", text: stdout }] };
+      }),
   );
 
   server.registerTool(
@@ -69,9 +72,10 @@ export function registerSessionTools(server: McpServer) {
         readOnlyHint: true,
       },
     },
-    async () => {
-      const stdout = await zellijActionOrThrow(["list-clients"]);
-      return { content: [{ type: "text", text: stdout }] };
-    },
+    async () =>
+      safeTool(async () => {
+        const stdout = await zellijActionOrThrow(["list-clients"]);
+        return { content: [{ type: "text", text: stdout }] };
+      }),
   );
 }
