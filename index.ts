@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { registerEditorTools } from "./lib/tools/editor.ts";
 import { registerPaneTools } from "./lib/tools/panes.ts";
 import { registerSessionTools } from "./lib/tools/session.ts";
 import { registerTabTools } from "./lib/tools/tabs.ts";
@@ -22,6 +23,7 @@ registerSessionTools(server);
 registerTabTools(server);
 registerPaneTools(server);
 registerTerminalTools(server);
+registerEditorTools(server);
 
 const transport = new StdioServerTransport();
 await server.connect(transport);

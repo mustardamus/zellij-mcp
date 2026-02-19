@@ -250,3 +250,21 @@ Resize the currently focused pane in the given direction. The pane grows in the 
 ```bash
 zellij --session zellij-mcp action resize <direction>
 ```
+
+### Editor
+
+#### `zellij_edit_file`
+
+Open a file in the user's `$EDITOR` (e.g. Helix, Vim, Nano) in a new Zellij pane. Focus moves to the newly created editor pane. The pane closes automatically when the user exits the editor. This opens the file for the human user to edit interactively -- it does not return file contents. [Docs](https://zellij.dev/documentation/cli-actions#edit)
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `file` | yes | The path to the file to open. Can be absolute or relative to the session's working directory. |
+| `floating` | no | If true, open the editor in a floating pane instead of a tiled pane. |
+| `line_number` | no | Line number to jump to when opening the file (1-indexed). |
+| `direction` | no | Direction to place the new tiled pane relative to the focused pane (down, right, up, left). Ignored for floating panes. |
+| `cwd` | no | Working directory for the editor pane. Useful when the file path is relative. |
+
+```bash
+zellij --session zellij-mcp action edit <file> [--floating] [--line-number <n>] [--direction <direction>] [--cwd <cwd>]
+```

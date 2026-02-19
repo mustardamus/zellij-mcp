@@ -27,7 +27,7 @@ zellij-mcp/
 │   └── types.ts              # Shared Zod schemas and TypeScript types
 ```
 
-## Layer 1: `lib/zellij.ts` — The CLI Wrapper
+## ~~Layer 1: `lib/zellij.ts` — The CLI Wrapper~~
 
 A single function that all tools call through:
 
@@ -43,9 +43,9 @@ async function zellij(args: string[]): Promise<{ stdout: string; stderr: string;
 This is the foundation. Every tool composes `zellij(["action", "write-chars", "hello"])`
 etc.
 
-## Layer 2: The MCP Tools
+## ~~Layer 2: The MCP Tools~~
 
-### Group 1: Session Tools (`lib/tools/session.ts`)
+### ~~Group 1: Session Tools (`lib/tools/session.ts`)~~
 
 | Tool Name        | Zellij Action                | Purpose                                             |
 | ---------------- | ---------------------------- | --------------------------------------------------- |
@@ -57,7 +57,7 @@ etc.
 The AI agent needs to understand the workspace state before acting. These are read-only,
 safe, and foundational.
 
-### Group 2: Tab Tools (`lib/tools/tabs.ts`)
+### ~~Group 2: Tab Tools (`lib/tools/tabs.ts`)~~
 
 | Tool Name    | Zellij Action                       | Purpose                                      |
 | ------------ | ----------------------------------- | -------------------------------------------- |
@@ -69,7 +69,7 @@ safe, and foundational.
 Tabs are the primary organizational unit. The agent tab, editor tab, server tab, git
 tab — the AI needs to navigate between them.
 
-### Group 3: Pane Tools (`lib/tools/panes.ts`)
+### ~~Group 3: Pane Tools (`lib/tools/panes.ts`)~~
 
 | Tool Name          | Zellij Action                                                      | Purpose                          |
 | ------------------ | ------------------------------------------------------------------ | -------------------------------- |
@@ -84,7 +84,7 @@ tab — the AI needs to navigate between them.
 Panes are where commands actually run. The AI agent needs to create scratch panes for
 one-off commands, manage floating panes for monitoring, etc.
 
-### Group 4: Terminal I/O Tools (`lib/tools/terminal.ts`) — The most important group
+### ~~Group 4: Terminal I/O Tools (`lib/tools/terminal.ts`) — The most important group~~
 
 | Tool Name       | Zellij Action                              | Purpose                                       |
 | --------------- | ------------------------------------------ | --------------------------------------------- |
@@ -100,7 +100,7 @@ This is the killer feature. The AI agent can:
 3. Send input (`write_to_pane` → type a command)
 4. Or spawn a fresh command pane (`run_command("npm test")`)
 
-### Group 5: Editor Tools (`lib/tools/editor.ts`)
+### ~~Group 5: Editor Tools (`lib/tools/editor.ts`)~~
 
 | Tool Name   | Zellij Action                                  | Purpose                                      |
 | ----------- | ---------------------------------------------- | -------------------------------------------- |
@@ -128,9 +128,9 @@ careful sequencing and probably `sleep` delays between actions.
 1. ~~**`lib/zellij.ts`** — The CLI wrapper. Everything depends on this.~~
 2. ~~**Session tools** — Read-only, safe, instant validation that the system works.~~
 3. ~~**Tab tools** — Navigation, the prerequisite for everything else.~~
-4. **Terminal I/O tools** — `write_to_pane`, `read_pane`, `run_command`. The core value.
-5. **Pane tools** — Pane management for creating workspace arrangements.
-6. **Editor tools** — Nice-to-have convenience.
+4. ~~**Terminal I/O tools** — `write_to_pane`, `read_pane`, `run_command`. The core value.~~
+5. ~~**Pane tools** — Pane management for creating workspace arrangements.~~
+6. ~~**Editor tools** — Nice-to-have convenience.~~
 7. **Compound tools** — Only after primitives are battle-tested.
 
 ## Critical Design Decisions
