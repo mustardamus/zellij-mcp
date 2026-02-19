@@ -2,9 +2,13 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 const zellijActionOrThrowMock = mock();
+const getFocusedTabNameMock = mock();
+const withFocusPreservationMock = mock();
 
 mock.module("../zellij.ts", () => ({
   zellijActionOrThrow: zellijActionOrThrowMock,
+  getFocusedTabName: getFocusedTabNameMock,
+  withFocusPreservation: withFocusPreservationMock,
 }));
 
 const { registerTabTools } = await import("./tabs.ts");
@@ -33,6 +37,15 @@ async function callTool(name: string, args: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   zellijActionOrThrowMock.mockReset();
+  getFocusedTabNameMock.mockReset();
+  withFocusPreservationMock.mockReset();
+
+  // Default: withFocusPreservation executes the action and respects the preserve flag
+  withFocusPreservationMock.mockImplementation(
+    async (action: () => Promise<unknown>, _preserve: boolean) => {
+      return action();
+    },
+  );
 });
 
 describe("zellij_go_to_tab", () => {
@@ -68,6 +81,15 @@ describe("zellij_go_to_tab", () => {
 });
 
 describe("zellij_new_tab", () => {
+  test("calls withFocusPreservation with preserve=true by default", async () => {
+    zellijActionOrThrowMock.mockResolvedValue("");
+    await callTool("zellij_new_tab", { name: "debug" });
+
+    expect(withFocusPreservationMock).toHaveBeenCalledTimes(1);
+    const [, preserve] = withFocusPreservationMock.mock.calls[0]!;
+    expect(preserve).toBe(true);
+  });
+
   test("calls zellijActionOrThrow with new-tab and name", async () => {
     zellijActionOrThrowMock.mockResolvedValue("");
     const result = await callTool("zellij_new_tab", { name: "debug" });
@@ -79,7 +101,29 @@ describe("zellij_new_tab", () => {
     ]);
     expect(result).toEqual({
       content: [
-        { type: "text", text: 'Created and switched to new tab "debug".' },
+        {
+          type: "text",
+          text: 'Created new tab "debug" (focus preserved on original tab).',
+        },
+      ],
+    });
+  });
+
+  test("calls withFocusPreservation with preserve=false when switch_to is true", async () => {
+    zellijActionOrThrowMock.mockResolvedValue("");
+    const result = await callTool("zellij_new_tab", {
+      name: "debug",
+      switch_to: true,
+    });
+
+    const [, preserve] = withFocusPreservationMock.mock.calls[0]!;
+    expect(preserve).toBe(false);
+    expect(result).toEqual({
+      content: [
+        {
+          type: "text",
+          text: 'Created new tab "debug" and switched to it.',
+        },
       ],
     });
   });
@@ -91,7 +135,10 @@ describe("zellij_new_tab", () => {
     expect(zellijActionOrThrowMock).toHaveBeenCalledWith(["new-tab"]);
     expect(result).toEqual({
       content: [
-        { type: "text", text: "Created and switched to new tab (unnamed)." },
+        {
+          type: "text",
+          text: "Created new tab (unnamed) (focus preserved on original tab).",
+        },
       ],
     });
   });
@@ -156,7 +203,7 @@ describe("zellij_new_tab", () => {
 });
 
 describe("zellij_rename_tab", () => {
-  test("calls zellijActionOrThrow with rename-tab and the new name", async () => {
+  test("calls zellijActionOrThrow with rename-tab when no target", async () => {
     zellijActionOrThrowMock.mockResolvedValue("");
     const result = await callTool("zellij_rename_tab", {
       name: "my-new-name",
@@ -173,6 +220,60 @@ describe("zellij_rename_tab", () => {
     });
   });
 
+  test("navigates to target tab, renames, and restores focus", async () => {
+    getFocusedTabNameMock.mockResolvedValue("editor");
+    zellijActionOrThrowMock.mockResolvedValue("");
+
+    const result = await callTool("zellij_rename_tab", {
+      name: "new-name",
+      target: "server",
+    });
+
+    expect(getFocusedTabNameMock).toHaveBeenCalledTimes(1);
+    expect(zellijActionOrThrowMock).toHaveBeenCalledTimes(3);
+    expect(zellijActionOrThrowMock.mock.calls[0]![0]).toEqual([
+      "go-to-tab-name",
+      "server",
+    ]);
+    expect(zellijActionOrThrowMock.mock.calls[1]![0]).toEqual([
+      "rename-tab",
+      "new-name",
+    ]);
+    expect(zellijActionOrThrowMock.mock.calls[2]![0]).toEqual([
+      "go-to-tab-name",
+      "editor",
+    ]);
+    expect(result).toEqual({
+      content: [{ type: "text", text: 'Renamed tab "server" to "new-name".' }],
+    });
+  });
+
+  test("does not restore focus if target is the focused tab", async () => {
+    getFocusedTabNameMock.mockResolvedValue("server");
+    zellijActionOrThrowMock.mockResolvedValue("");
+
+    await callTool("zellij_rename_tab", {
+      name: "new-name",
+      target: "server",
+    });
+
+    // go-to-tab-name server + rename-tab new-name (no restore since target === focused)
+    expect(zellijActionOrThrowMock).toHaveBeenCalledTimes(2);
+  });
+
+  test("does not restore focus if getFocusedTabName returns null", async () => {
+    getFocusedTabNameMock.mockResolvedValue(null);
+    zellijActionOrThrowMock.mockResolvedValue("");
+
+    await callTool("zellij_rename_tab", {
+      name: "new-name",
+      target: "server",
+    });
+
+    // go-to-tab-name server + rename-tab new-name (no restore since focused is null)
+    expect(zellijActionOrThrowMock).toHaveBeenCalledTimes(2);
+  });
+
   test("propagates errors from zellijActionOrThrow", async () => {
     zellijActionOrThrowMock.mockRejectedValue(new Error("no focused tab"));
     await expect(
@@ -182,7 +283,7 @@ describe("zellij_rename_tab", () => {
 });
 
 describe("zellij_close_tab", () => {
-  test("calls zellijActionOrThrow with close-tab", async () => {
+  test("calls zellijActionOrThrow with close-tab when no target", async () => {
     zellijActionOrThrowMock.mockResolvedValue("");
     const result = await callTool("zellij_close_tab");
 
@@ -190,6 +291,48 @@ describe("zellij_close_tab", () => {
     expect(result).toEqual({
       content: [{ type: "text", text: "Closed the focused tab." }],
     });
+  });
+
+  test("navigates to target tab, closes, and restores focus", async () => {
+    getFocusedTabNameMock.mockResolvedValue("editor");
+    zellijActionOrThrowMock.mockResolvedValue("");
+
+    const result = await callTool("zellij_close_tab", { target: "server" });
+
+    expect(getFocusedTabNameMock).toHaveBeenCalledTimes(1);
+    expect(zellijActionOrThrowMock).toHaveBeenCalledTimes(3);
+    expect(zellijActionOrThrowMock.mock.calls[0]![0]).toEqual([
+      "go-to-tab-name",
+      "server",
+    ]);
+    expect(zellijActionOrThrowMock.mock.calls[1]![0]).toEqual(["close-tab"]);
+    expect(zellijActionOrThrowMock.mock.calls[2]![0]).toEqual([
+      "go-to-tab-name",
+      "editor",
+    ]);
+    expect(result).toEqual({
+      content: [{ type: "text", text: 'Closed tab "server".' }],
+    });
+  });
+
+  test("does not restore focus if target is the focused tab", async () => {
+    getFocusedTabNameMock.mockResolvedValue("server");
+    zellijActionOrThrowMock.mockResolvedValue("");
+
+    await callTool("zellij_close_tab", { target: "server" });
+
+    // go-to-tab-name server + close-tab (no restore since target === focused)
+    expect(zellijActionOrThrowMock).toHaveBeenCalledTimes(2);
+  });
+
+  test("does not restore focus if getFocusedTabName returns null", async () => {
+    getFocusedTabNameMock.mockResolvedValue(null);
+    zellijActionOrThrowMock.mockResolvedValue("");
+
+    await callTool("zellij_close_tab", { target: "server" });
+
+    // go-to-tab-name server + close-tab (no restore since focused is null)
+    expect(zellijActionOrThrowMock).toHaveBeenCalledTimes(2);
   });
 
   test("propagates errors from zellijActionOrThrow", async () => {

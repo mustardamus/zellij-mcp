@@ -2,7 +2,11 @@ import { readFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { zellij, zellijActionOrThrow } from "../zellij.ts";
+import {
+  withFocusPreservation,
+  zellij,
+  zellijActionOrThrow,
+} from "../zellij.ts";
 
 const DEFAULT_DUMP_DIR = "/tmp";
 
@@ -111,7 +115,7 @@ export function registerTerminalTools(server: McpServer) {
         "Use the floating option to open in a floating pane instead. " +
         "The pane will remain open after the command finishes unless close_on_exit is set to true. " +
         "This does NOT run the command in the currently focused pane — it always creates a new pane. " +
-        "Focus will move to the newly created pane.",
+        "By default, focus stays on the current pane. Set switch_to to true to move focus to the new pane.",
       inputSchema: {
         command: z
           .array(z.string())
@@ -135,45 +139,56 @@ export function registerTerminalTools(server: McpServer) {
           .string()
           .optional()
           .describe("Working directory for the command."),
+        switch_to: z
+          .boolean()
+          .optional()
+          .describe(
+            "If true, move focus to the new command pane after creation. Defaults to false (focus stays on the current pane).",
+          ),
       },
     },
-    async ({ command, floating, name, close_on_exit, cwd }) => {
-      const args: string[] = ["run"];
+    async ({ command, floating, name, close_on_exit, cwd, switch_to }) => {
+      const perform = async () => {
+        const args: string[] = ["run"];
 
-      if (floating) {
-        args.push("--floating");
-      }
+        if (floating) {
+          args.push("--floating");
+        }
 
-      if (name) {
-        args.push("--name", name);
-      }
+        if (name) {
+          args.push("--name", name);
+        }
 
-      if (close_on_exit) {
-        args.push("--close-on-exit");
-      }
+        if (close_on_exit) {
+          args.push("--close-on-exit");
+        }
 
-      if (cwd) {
-        args.push("--cwd", cwd);
-      }
+        if (cwd) {
+          args.push("--cwd", cwd);
+        }
 
-      args.push("--", ...command);
+        args.push("--", ...command);
 
-      const result = await zellij(args);
+        const result = await zellij(args);
 
-      if (result.exitCode !== 0) {
-        const detail = result.stderr || result.stdout || "unknown error";
-        throw new Error(
-          `zellij run failed (exit ${result.exitCode}): ${detail}`,
-        );
-      }
+        if (result.exitCode !== 0) {
+          const detail = result.stderr || result.stdout || "unknown error";
+          throw new Error(
+            `zellij run failed (exit ${result.exitCode}): ${detail}`,
+          );
+        }
+      };
+
+      await withFocusPreservation(perform, !switch_to);
 
       const label = name ? `"${name}"` : "(unnamed)";
       const style = floating ? "floating" : "tiled";
+      const focusNote = switch_to ? "" : " (focus preserved on original pane)";
       return {
         content: [
           {
             type: "text",
-            text: `Started command in new ${style} pane ${label}: ${command.join(" ")}`,
+            text: `Started command in new ${style} pane ${label}: ${command.join(" ")}${focusNote}`,
           },
         ],
       };

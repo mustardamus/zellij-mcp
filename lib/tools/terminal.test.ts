@@ -3,10 +3,12 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 const zellijActionOrThrowMock = mock();
 const zellijMock = mock();
+const withFocusPreservationMock = mock();
 
 mock.module("../zellij.ts", () => ({
   zellijActionOrThrow: zellijActionOrThrowMock,
   zellij: zellijMock,
+  withFocusPreservation: withFocusPreservationMock,
 }));
 
 const readFileMock = mock();
@@ -46,6 +48,13 @@ beforeEach(() => {
   zellijMock.mockReset();
   readFileMock.mockReset();
   unlinkMock.mockReset();
+  withFocusPreservationMock.mockReset();
+
+  withFocusPreservationMock.mockImplementation(
+    async (action: () => Promise<unknown>, _preserve: boolean) => {
+      return action();
+    },
+  );
 });
 
 describe("zellij_write_to_pane", () => {
@@ -218,6 +227,26 @@ describe("zellij_read_pane_full", () => {
 });
 
 describe("zellij_run_command", () => {
+  test("calls withFocusPreservation with preserve=true by default", async () => {
+    zellijMock.mockResolvedValue({ stdout: "", stderr: "", exitCode: 0 });
+    await callTool("zellij_run_command", { command: ["npm", "test"] });
+
+    expect(withFocusPreservationMock).toHaveBeenCalledTimes(1);
+    const [, preserve] = withFocusPreservationMock.mock.calls[0]!;
+    expect(preserve).toBe(true);
+  });
+
+  test("calls withFocusPreservation with preserve=false when switch_to is true", async () => {
+    zellijMock.mockResolvedValue({ stdout: "", stderr: "", exitCode: 0 });
+    await callTool("zellij_run_command", {
+      command: ["npm", "test"],
+      switch_to: true,
+    });
+
+    const [, preserve] = withFocusPreservationMock.mock.calls[0]!;
+    expect(preserve).toBe(false);
+  });
+
   test("calls zellij with run and the command", async () => {
     zellijMock.mockResolvedValue({ stdout: "", stderr: "", exitCode: 0 });
     const result = await callTool("zellij_run_command", {
@@ -229,7 +258,7 @@ describe("zellij_run_command", () => {
       content: [
         {
           type: "text",
-          text: "Started command in new tiled pane (unnamed): npm test",
+          text: "Started command in new tiled pane (unnamed): npm test (focus preserved on original pane)",
         },
       ],
     });
@@ -302,6 +331,7 @@ describe("zellij_run_command", () => {
       name: "devserver",
       close_on_exit: true,
       cwd: "/tmp",
+      switch_to: true,
     });
 
     expect(zellijMock).toHaveBeenCalledWith([

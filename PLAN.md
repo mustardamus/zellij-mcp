@@ -27,87 +27,6 @@ zellij-mcp/
 │   └── types.ts              # Shared Zod schemas and TypeScript types
 ```
 
-## ~~Layer 1: `lib/zellij.ts` — The CLI Wrapper~~
-
-A single function that all tools call through:
-
-```ts
-async function zellij(args: string[]): Promise<{ stdout: string; stderr: string; exitCode: number }>
-```
-
-- Automatically prepends `--session zellij-mcp` to every `action` call
-- Uses the local `./bin/zellij` binary
-- Handles errors, timeouts, and stderr parsing
-- All tools are thin wrappers around this function
-
-This is the foundation. Every tool composes `zellij(["action", "write-chars", "hello"])`
-etc.
-
-## ~~Layer 2: The MCP Tools~~
-
-### ~~Group 1: Session Tools (`lib/tools/session.ts`)~~
-
-| Tool Name        | Zellij Action                | Purpose                                             |
-| ---------------- | ---------------------------- | --------------------------------------------------- |
-| `list_sessions`  | `zellij list-sessions -n -s` | List all active Zellij sessions                     |
-| `query_tab_names`| `action query-tab-names`     | Get all tab names in the current session             |
-| `dump_layout`    | `action dump-layout`         | Get the full current layout (useful for state)       |
-| `list_clients`   | `action list-clients`        | See connected clients and what they're running       |
-
-The AI agent needs to understand the workspace state before acting. These are read-only,
-safe, and foundational.
-
-### ~~Group 2: Tab Tools (`lib/tools/tabs.ts`)~~
-
-| Tool Name    | Zellij Action                       | Purpose                                      |
-| ------------ | ----------------------------------- | -------------------------------------------- |
-| `go_to_tab`  | `action go-to-tab-name <name>`      | Switch to a named tab                        |
-| `new_tab`    | `action new-tab --name <name>`      | Create a new tab with optional name/layout   |
-| `rename_tab` | `action rename-tab <name>`          | Rename the focused tab                       |
-| `close_tab`  | `action close-tab`                  | Close the focused tab                        |
-
-Tabs are the primary organizational unit. The agent tab, editor tab, server tab, git
-tab — the AI needs to navigate between them.
-
-### ~~Group 3: Pane Tools (`lib/tools/panes.ts`)~~
-
-| Tool Name          | Zellij Action                                                      | Purpose                          |
-| ------------------ | ------------------------------------------------------------------ | -------------------------------- |
-| `new_pane`         | `action new-pane [--floating] [--name] [--direction] [--cwd] [-- cmd]` | Open a new pane, optionally running a command |
-| `close_pane`       | `action close-pane`                                                | Close the focused pane           |
-| `focus_pane`       | `action move-focus <direction>`                                    | Move focus in a direction        |
-| `toggle_floating`  | `action toggle-floating-panes`                                     | Show/hide floating panes         |
-| `toggle_fullscreen`| `action toggle-fullscreen`                                         | Toggle fullscreen on focused pane|
-| `rename_pane`      | `action rename-pane <name>`                                        | Name the focused pane            |
-| `resize_pane`      | `action resize <direction>`                                        | Resize focused pane              |
-
-Panes are where commands actually run. The AI agent needs to create scratch panes for
-one-off commands, manage floating panes for monitoring, etc.
-
-### ~~Group 4: Terminal I/O Tools (`lib/tools/terminal.ts`) — The most important group~~
-
-| Tool Name       | Zellij Action                              | Purpose                                       |
-| --------------- | ------------------------------------------ | --------------------------------------------- |
-| `write_to_pane` | `action write-chars <chars>`               | Send keystrokes to the focused pane            |
-| `read_pane`     | `action dump-screen <path>` then read file | Capture visible terminal output of focused pane|
-| `read_pane_full`| `action dump-screen --full <path>` then read file | Capture full scrollback of focused pane |
-| `run_command`   | `zellij run [--floating] [--name] [--close-on-exit] -- <cmd>` | Run a command in a new pane |
-
-This is the killer feature. The AI agent can:
-
-1. Navigate to a tab (`go_to_tab("server")`)
-2. Read what's on screen (`read_pane` → see build errors)
-3. Send input (`write_to_pane` → type a command)
-4. Or spawn a fresh command pane (`run_command("npm test")`)
-
-### ~~Group 5: Editor Tools (`lib/tools/editor.ts`)~~
-
-| Tool Name   | Zellij Action                                  | Purpose                                      |
-| ----------- | ---------------------------------------------- | -------------------------------------------- |
-| `edit_file` | `action edit <file> [--floating] [--line-number]` | Open a file in the user's `$EDITOR` in a new pane |
-
-Useful for opening files in the user's editor (Helix) from the AI context.
-
 ## Layer 3: Compound / High-Level Tools
 
 Once the primitives above exist, build composite tools that chain multiple actions.
@@ -125,12 +44,6 @@ careful sequencing and probably `sleep` delays between actions.
 
 ## Implementation Order
 
-1. ~~**`lib/zellij.ts`** — The CLI wrapper. Everything depends on this.~~
-2. ~~**Session tools** — Read-only, safe, instant validation that the system works.~~
-3. ~~**Tab tools** — Navigation, the prerequisite for everything else.~~
-4. ~~**Terminal I/O tools** — `write_to_pane`, `read_pane`, `run_command`. The core value.~~
-5. ~~**Pane tools** — Pane management for creating workspace arrangements.~~
-6. ~~**Editor tools** — Nice-to-have convenience.~~
 7. **Compound tools** — Only after primitives are battle-tested.
 
 ## Critical Design Decisions

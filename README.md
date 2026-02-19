@@ -43,6 +43,50 @@ The Zellij session name to target with all commands. Defaults to `zellij-mcp`.
 
 Directory for temporary screen dump files created by `read_pane` and `read_pane_full`. Defaults to `/tmp`. Files are cleaned up automatically after reading.
 
+## Focus Preservation
+
+By default, several tools in zellij-mcp **preserve the user's current focus** instead of switching to the newly created tab or pane. This differs from raw Zellij behavior, where actions like `new-tab` or `new-pane` always move focus to the new element.
+
+The rationale: when an AI agent creates a background tab for a dev server or spawns a pane to run tests, it shouldn't yank the user's view away from what they're working on.
+
+### Affected tools
+
+| Tool | Zellij default | zellij-mcp default | Override |
+|------|---------------|-------------------|----------|
+| `new_tab` | Switches focus to new tab | Focus stays on current tab | `switch_to: true` |
+| `new_pane` | Switches focus to new pane | Focus stays on current pane | `switch_to: true` |
+| `run_command` | Switches focus to new pane | Focus stays on current pane | `switch_to: true` |
+| `rename_tab` | Operates on focused tab only | Can target any tab by name | `target: "tab-name"` |
+| `close_tab` | Operates on focused tab only | Can target any tab by name | `target: "tab-name"` |
+
+`edit_file` is **not** focus-preserving — it always switches focus to the editor pane, since the user needs to interact with it.
+
+### How it works
+
+When focus preservation is active, the tool:
+
+1. Calls `dump-layout` to find the currently focused tab
+2. Performs the action (which may move focus as a side effect)
+3. Calls `go-to-tab-name` to restore focus to the original tab
+
+### Examples
+
+These are the default behaviors — the agent will preserve focus automatically:
+
+> "Create a new tab called server"
+>
+> "Run npm test in a floating pane"
+>
+> "Rename the server tab to dev-server"
+>
+> "Close the git tab"
+
+To override and switch focus, tell the agent explicitly:
+
+> "Create a new tab called server and switch to it"
+>
+> "Run npm test in a floating pane and show me the output"
+
 ## Tools
 
 ### Session
@@ -95,13 +139,14 @@ zellij --session zellij-mcp action go-to-tab-name <name>
 
 #### `zellij_new_tab`
 
-Create a new tab in the session with an optional name and layout. [Docs](https://zellij.dev/documentation/cli-actions#new-tab)
+Create a new tab in the session with an optional name and layout. By default, focus stays on the current tab. [Docs](https://zellij.dev/documentation/cli-actions#new-tab)
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
 | `name` | no | Name for the new tab. If omitted, Zellij assigns a default name. |
 | `layout` | no | Path to a layout file to use for the new tab. |
 | `cwd` | no | Working directory for the new tab. |
+| `switch_to` | no | If true, switch focus to the new tab. Defaults to false. |
 
 ```bash
 zellij --session zellij-mcp action new-tab [--name <name>] [--layout <layout>] [--cwd <cwd>]
@@ -109,11 +154,12 @@ zellij --session zellij-mcp action new-tab [--name <name>] [--layout <layout>] [
 
 #### `zellij_rename_tab`
 
-Rename the currently focused tab in the session. [Docs](https://zellij.dev/documentation/cli-actions#rename-tab)
+Rename a tab in the session. If `target` is provided, renames that specific tab without changing focus. If omitted, renames the currently focused tab. [Docs](https://zellij.dev/documentation/cli-actions#rename-tab)
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
-| `name` | yes | The new name for the currently focused tab. |
+| `name` | yes | The new name for the tab. |
+| `target` | no | The current name of the tab to rename. If omitted, renames the focused tab. |
 
 ```bash
 zellij --session zellij-mcp action rename-tab <name>
@@ -121,7 +167,11 @@ zellij --session zellij-mcp action rename-tab <name>
 
 #### `zellij_close_tab`
 
-Close the currently focused tab in the session. Use with caution -- this is destructive and cannot be undone. [Docs](https://zellij.dev/documentation/cli-actions#close-tab)
+Close a tab in the session. If `target` is provided, closes that specific tab and restores focus to the original tab. If omitted, closes the currently focused tab. Use with caution -- this is destructive and cannot be undone. [Docs](https://zellij.dev/documentation/cli-actions#close-tab)
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `target` | no | The name of the tab to close. If omitted, closes the focused tab. |
 
 ```bash
 zellij --session zellij-mcp action close-tab
@@ -159,7 +209,7 @@ zellij --session zellij-mcp action dump-screen --full <path>
 
 #### `zellij_run_command`
 
-Run a command in a new Zellij pane. Always creates a new pane -- does not run in the currently focused pane. [Docs](https://zellij.dev/documentation/cli-actions#run)
+Run a command in a new Zellij pane. Always creates a new pane -- does not run in the currently focused pane. By default, focus stays on the current pane. [Docs](https://zellij.dev/documentation/cli-actions#run)
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
@@ -168,6 +218,7 @@ Run a command in a new Zellij pane. Always creates a new pane -- does not run in
 | `name` | no | Optional name for the new pane. |
 | `close_on_exit` | no | If true, the pane closes automatically when the command finishes. |
 | `cwd` | no | Working directory for the command. |
+| `switch_to` | no | If true, move focus to the new command pane. Defaults to false. |
 
 ```bash
 zellij --session zellij-mcp run [--floating] [--name <name>] [--close-on-exit] [--cwd <cwd>] -- <command...>
@@ -177,7 +228,7 @@ zellij --session zellij-mcp run [--floating] [--name <name>] [--close-on-exit] [
 
 #### `zellij_new_pane`
 
-Open a new pane in the currently focused tab. By default, opens a tiled pane. Focus moves to the newly created pane. [Docs](https://zellij.dev/documentation/cli-actions#new-pane)
+Open a new pane in the currently focused tab. By default, opens a tiled pane. By default, focus stays on the current pane. [Docs](https://zellij.dev/documentation/cli-actions#new-pane)
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
@@ -186,6 +237,7 @@ Open a new pane in the currently focused tab. By default, opens a tiled pane. Fo
 | `direction` | no | Direction to place the new tiled pane relative to the focused pane (down, right, up, left). Ignored for floating panes. |
 | `cwd` | no | Working directory for the new pane. |
 | `command` | no | Optional command and arguments to run in the new pane (e.g. `["npm", "test"]`). |
+| `switch_to` | no | If true, move focus to the new pane. Defaults to false. |
 
 ```bash
 zellij --session zellij-mcp action new-pane [--floating] [--name <name>] [--direction <direction>] [--cwd <cwd>] [-- <command...>]

@@ -144,3 +144,42 @@ export async function zellijRawOrThrow(
 
   return result.stdout;
 }
+
+/**
+ * Parse the KDL output of `dump-layout` to find the name of the currently
+ * focused tab. Returns the tab name, or null if no focused tab is found.
+ */
+export async function getFocusedTabName(
+  options?: ZellijOptions,
+): Promise<string | null> {
+  const layout = await zellijActionOrThrow(["dump-layout"], options);
+  const match = layout.match(/tab\s+name="([^"]+)"[^{]*\bfocus=true/);
+  return match?.[1] ?? null;
+}
+
+/**
+ * Execute an action while preserving the user's current tab focus.
+ *
+ * If `preserve` is true (the default): snapshots the focused tab name before
+ * the action, runs the action, then switches back to the original tab.
+ *
+ * If `preserve` is false: just runs the action (raw Zellij behavior).
+ */
+export async function withFocusPreservation<T>(
+  action: () => Promise<T>,
+  preserve: boolean,
+  options?: ZellijOptions,
+): Promise<T> {
+  if (!preserve) {
+    return action();
+  }
+
+  const focusedTab = await getFocusedTabName(options);
+  const result = await action();
+
+  if (focusedTab) {
+    await zellijActionOrThrow(["go-to-tab-name", focusedTab], options);
+  }
+
+  return result;
+}

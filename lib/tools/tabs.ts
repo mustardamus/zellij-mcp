@@ -1,6 +1,10 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { zellijActionOrThrow } from "../zellij.ts";
+import {
+  getFocusedTabName,
+  withFocusPreservation,
+  zellijActionOrThrow,
+} from "../zellij.ts";
 
 export function registerTabTools(server: McpServer) {
   server.registerTool(
@@ -30,7 +34,9 @@ export function registerTabTools(server: McpServer) {
     {
       title: "New Tab",
       description:
-        "Create a new tab in the Zellij session with an optional name and layout. Automatically switches focus to the new tab — there is no need to call go_to_tab afterward.",
+        "Create a new tab in the Zellij session with an optional name and layout. " +
+        "By default, the tab is created in the background and focus stays on the current tab. " +
+        "Set switch_to to true to switch focus to the new tab after creation.",
       inputSchema: {
         name: z
           .string()
@@ -46,29 +52,42 @@ export function registerTabTools(server: McpServer) {
           .string()
           .optional()
           .describe("Working directory for the new tab."),
+        switch_to: z
+          .boolean()
+          .optional()
+          .describe(
+            "If true, switch focus to the new tab after creation. Defaults to false (focus stays on the current tab).",
+          ),
       },
     },
-    async ({ name, layout, cwd }) => {
-      const args: string[] = ["new-tab"];
+    async ({ name, layout, cwd, switch_to }) => {
+      const perform = async () => {
+        const args: string[] = ["new-tab"];
 
-      if (name) {
-        args.push("--name", name);
-      }
+        if (name) {
+          args.push("--name", name);
+        }
 
-      if (layout) {
-        args.push("--layout", layout);
-      }
+        if (layout) {
+          args.push("--layout", layout);
+        }
 
-      if (cwd) {
-        args.push("--cwd", cwd);
-      }
+        if (cwd) {
+          args.push("--cwd", cwd);
+        }
 
-      await zellijActionOrThrow(args);
+        await zellijActionOrThrow(args);
+      };
+
+      await withFocusPreservation(perform, !switch_to);
 
       const label = name ? `"${name}"` : "(unnamed)";
+      const focusNote = switch_to
+        ? "and switched to it"
+        : "(focus preserved on original tab)";
       return {
         content: [
-          { type: "text", text: `Created and switched to new tab ${label}.` },
+          { type: "text", text: `Created new tab ${label} ${focusNote}.` },
         ],
       };
     },
@@ -78,14 +97,37 @@ export function registerTabTools(server: McpServer) {
     "zellij_rename_tab",
     {
       title: "Rename Tab",
-      description: "Rename the currently focused tab in the Zellij session.",
+      description:
+        "Rename a tab in the Zellij session. " +
+        "If target is provided, renames that specific tab without changing focus. " +
+        "If target is omitted, renames the currently focused tab.",
       inputSchema: {
-        name: z
+        name: z.string().describe("The new name for the tab."),
+        target: z
           .string()
-          .describe("The new name for the currently focused tab."),
+          .optional()
+          .describe(
+            "The current name of the tab to rename. If omitted, renames the currently focused tab.",
+          ),
       },
     },
-    async ({ name }) => {
+    async ({ name, target }) => {
+      if (target) {
+        const focusedTab = await getFocusedTabName();
+        await zellijActionOrThrow(["go-to-tab-name", target]);
+        await zellijActionOrThrow(["rename-tab", name]);
+
+        if (focusedTab && focusedTab !== target) {
+          await zellijActionOrThrow(["go-to-tab-name", focusedTab]);
+        }
+
+        return {
+          content: [
+            { type: "text", text: `Renamed tab "${target}" to "${name}".` },
+          ],
+        };
+      }
+
       await zellijActionOrThrow(["rename-tab", name]);
       return {
         content: [{ type: "text", text: `Renamed focused tab to "${name}".` }],
@@ -98,12 +140,37 @@ export function registerTabTools(server: McpServer) {
     {
       title: "Close Tab",
       description:
-        "Close the currently focused tab in the Zellij session. Use with caution — this is destructive and cannot be undone.",
+        "Close a tab in the Zellij session. " +
+        "If target is provided, closes that specific tab and restores focus to the original tab. " +
+        "If target is omitted, closes the currently focused tab. " +
+        "Use with caution — this is destructive and cannot be undone.",
       annotations: {
         destructiveHint: true,
       },
+      inputSchema: {
+        target: z
+          .string()
+          .optional()
+          .describe(
+            "The name of the tab to close. If omitted, closes the currently focused tab.",
+          ),
+      },
     },
-    async () => {
+    async ({ target }) => {
+      if (target) {
+        const focusedTab = await getFocusedTabName();
+        await zellijActionOrThrow(["go-to-tab-name", target]);
+        await zellijActionOrThrow(["close-tab"]);
+
+        if (focusedTab && focusedTab !== target) {
+          await zellijActionOrThrow(["go-to-tab-name", focusedTab]);
+        }
+
+        return {
+          content: [{ type: "text", text: `Closed tab "${target}".` }],
+        };
+      }
+
       await zellijActionOrThrow(["close-tab"]);
       return { content: [{ type: "text", text: "Closed the focused tab." }] };
     },

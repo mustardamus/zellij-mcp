@@ -15,6 +15,8 @@ const {
   zellijActionOrThrow,
   zellijRaw,
   zellijRawOrThrow,
+  getFocusedTabName,
+  withFocusPreservation,
 } = await import("./zellij.ts");
 
 function mockExecResult(error: Error | null, stdout: string, stderr: string) {
@@ -275,5 +277,158 @@ describe("zellijRawOrThrow", () => {
     await expect(zellijRawOrThrow(["list-sessions"])).rejects.toThrow(
       /list-sessions failed.*no sessions/,
     );
+  });
+});
+
+describe("getFocusedTabName", () => {
+  test("extracts focused tab name from dump-layout output", async () => {
+    const layout = `layout {
+    tab name="editor" {
+        pane
+    }
+    tab name="server" focus=true {
+        pane
+    }
+    tab name="git" {
+        pane
+    }
+}`;
+    mockExecResult(null, layout, "");
+    const result = await getFocusedTabName();
+    expect(result).toBe("server");
+  });
+
+  test("returns first focused tab name", async () => {
+    const layout = `layout {
+    tab name="agent" focus=true hide_floating_panes=true {
+        pane
+    }
+    tab name="editor" {
+        pane
+    }
+}`;
+    mockExecResult(null, layout, "");
+    const result = await getFocusedTabName();
+    expect(result).toBe("agent");
+  });
+
+  test("returns null when no tab has focus=true", async () => {
+    const layout = `layout {
+    tab name="editor" {
+        pane
+    }
+    tab name="server" {
+        pane
+    }
+}`;
+    mockExecResult(null, layout, "");
+    const result = await getFocusedTabName();
+    expect(result).toBeNull();
+  });
+
+  test("handles focus=true with other attributes before it", async () => {
+    const layout = `layout {
+    tab name="agent" focus=true hide_floating_panes=true {
+        pane
+    }
+}`;
+    mockExecResult(null, layout, "");
+    const result = await getFocusedTabName();
+    expect(result).toBe("agent");
+  });
+});
+
+describe("withFocusPreservation", () => {
+  test("executes action directly when preserve is false", async () => {
+    const action = mock().mockResolvedValue("result");
+    const result = await withFocusPreservation(action, false);
+
+    expect(result).toBe("result");
+    expect(action).toHaveBeenCalledTimes(1);
+    // Should NOT call dump-layout (only 0 exec calls for focus)
+    expect(execFileMock).not.toHaveBeenCalled();
+  });
+
+  test("snapshots focus, runs action, and restores when preserve is true", async () => {
+    const calls: string[][] = [];
+
+    // First call: dump-layout (getFocusedTabName)
+    // Second call: the action itself (new-tab)
+    // Third call: go-to-tab-name (restore)
+    execFileMock.mockImplementation(
+      (
+        _bin: string,
+        args: string[],
+        _opts: unknown,
+        cb: (err: Error | null, stdout: string, stderr: string) => void,
+      ) => {
+        calls.push(args);
+
+        // dump-layout response
+        if (args.includes("dump-layout")) {
+          cb(
+            null,
+            `layout {\n    tab name="original" focus=true {\n        pane\n    }\n}`,
+            "",
+          );
+          return;
+        }
+
+        cb(null, "", "");
+      },
+    );
+
+    const action = async () => {
+      await zellijActionOrThrow(["new-tab", "--name", "test"]);
+      return "action-done";
+    };
+
+    const result = await withFocusPreservation(action, true);
+
+    expect(result).toBe("action-done");
+    // Should have called: dump-layout, new-tab, go-to-tab-name
+    expect(calls).toHaveLength(3);
+    expect(calls[0]).toContain("dump-layout");
+    expect(calls[1]).toContain("new-tab");
+    expect(calls[2]).toContain("go-to-tab-name");
+    expect(calls[2]).toContain("original");
+  });
+
+  test("does not restore focus when getFocusedTabName returns null", async () => {
+    const calls: string[][] = [];
+
+    execFileMock.mockImplementation(
+      (
+        _bin: string,
+        args: string[],
+        _opts: unknown,
+        cb: (err: Error | null, stdout: string, stderr: string) => void,
+      ) => {
+        calls.push(args);
+
+        // dump-layout response with no focus=true
+        if (args.includes("dump-layout")) {
+          cb(
+            null,
+            `layout {\n    tab name="editor" {\n        pane\n    }\n}`,
+            "",
+          );
+          return;
+        }
+
+        cb(null, "", "");
+      },
+    );
+
+    const action = async () => {
+      await zellijActionOrThrow(["new-tab"]);
+    };
+
+    await withFocusPreservation(action, true);
+
+    // Should have called: dump-layout, new-tab (NO go-to-tab-name)
+    expect(calls).toHaveLength(2);
+    expect(calls[0]).toContain("dump-layout");
+    expect(calls[1]).toContain("new-tab");
   });
 });

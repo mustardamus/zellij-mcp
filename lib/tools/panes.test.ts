@@ -2,9 +2,11 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 const zellijActionOrThrowMock = mock();
+const withFocusPreservationMock = mock();
 
 mock.module("../zellij.ts", () => ({
   zellijActionOrThrow: zellijActionOrThrowMock,
+  withFocusPreservation: withFocusPreservationMock,
 }));
 
 const { registerPaneTools } = await import("./panes.ts");
@@ -33,16 +35,45 @@ async function callTool(name: string, args: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   zellijActionOrThrowMock.mockReset();
+  withFocusPreservationMock.mockReset();
+
+  withFocusPreservationMock.mockImplementation(
+    async (action: () => Promise<unknown>, _preserve: boolean) => {
+      return action();
+    },
+  );
 });
 
 describe("zellij_new_pane", () => {
+  test("calls withFocusPreservation with preserve=true by default", async () => {
+    zellijActionOrThrowMock.mockResolvedValue("");
+    await callTool("zellij_new_pane", {});
+
+    expect(withFocusPreservationMock).toHaveBeenCalledTimes(1);
+    const [, preserve] = withFocusPreservationMock.mock.calls[0]!;
+    expect(preserve).toBe(true);
+  });
+
+  test("calls withFocusPreservation with preserve=false when switch_to is true", async () => {
+    zellijActionOrThrowMock.mockResolvedValue("");
+    await callTool("zellij_new_pane", { switch_to: true });
+
+    const [, preserve] = withFocusPreservationMock.mock.calls[0]!;
+    expect(preserve).toBe(false);
+  });
+
   test("calls zellijActionOrThrow with new-pane (no options)", async () => {
     zellijActionOrThrowMock.mockResolvedValue("");
     const result = await callTool("zellij_new_pane", {});
 
     expect(zellijActionOrThrowMock).toHaveBeenCalledWith(["new-pane"]);
     expect(result).toEqual({
-      content: [{ type: "text", text: "Opened new tiled pane (unnamed)." }],
+      content: [
+        {
+          type: "text",
+          text: "Opened new tiled pane (unnamed) (focus preserved on original pane).",
+        },
+      ],
     });
   });
 
@@ -130,6 +161,7 @@ describe("zellij_new_pane", () => {
       name: "monitor",
       cwd: "/tmp",
       command: ["htop"],
+      switch_to: true,
     });
 
     expect(zellijActionOrThrowMock).toHaveBeenCalledWith([

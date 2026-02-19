@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { zellijActionOrThrow } from "../zellij.ts";
+import { withFocusPreservation, zellijActionOrThrow } from "../zellij.ts";
 
 export function registerPaneTools(server: McpServer) {
   server.registerTool(
@@ -11,7 +11,7 @@ export function registerPaneTools(server: McpServer) {
         "Open a new pane in the currently focused tab of the Zellij session. " +
         "By default, opens a tiled pane. Use the floating option to open a floating pane instead. " +
         "Optionally run a command in the new pane (similar to run_command but using the action interface). " +
-        "Focus will move to the newly created pane — there is no need to call focus_pane afterward. " +
+        "By default, focus stays on the current pane. Set switch_to to true to move focus to the new pane. " +
         "Use the direction option to control where the new tiled pane is placed relative to the focused pane.",
       inputSchema: {
         floating: z
@@ -39,40 +39,51 @@ export function registerPaneTools(server: McpServer) {
           .describe(
             "Optional command and arguments to run in the new pane (e.g. ['npm', 'test']).",
           ),
+        switch_to: z
+          .boolean()
+          .optional()
+          .describe(
+            "If true, move focus to the new pane after creation. Defaults to false (focus stays on the current pane).",
+          ),
       },
     },
-    async ({ floating, name, direction, cwd, command }) => {
-      const args: string[] = ["new-pane"];
+    async ({ floating, name, direction, cwd, command, switch_to }) => {
+      const perform = async () => {
+        const args: string[] = ["new-pane"];
 
-      if (floating) {
-        args.push("--floating");
-      }
+        if (floating) {
+          args.push("--floating");
+        }
 
-      if (name) {
-        args.push("--name", name);
-      }
+        if (name) {
+          args.push("--name", name);
+        }
 
-      if (direction && !floating) {
-        args.push("--direction", direction);
-      }
+        if (direction && !floating) {
+          args.push("--direction", direction);
+        }
 
-      if (cwd) {
-        args.push("--cwd", cwd);
-      }
+        if (cwd) {
+          args.push("--cwd", cwd);
+        }
 
-      if (command && command.length > 0) {
-        args.push("--", ...command);
-      }
+        if (command && command.length > 0) {
+          args.push("--", ...command);
+        }
 
-      await zellijActionOrThrow(args);
+        await zellijActionOrThrow(args);
+      };
+
+      await withFocusPreservation(perform, !switch_to);
 
       const label = name ? `"${name}"` : "(unnamed)";
       const style = floating ? "floating" : "tiled";
+      const focusNote = switch_to ? "" : " (focus preserved on original pane)";
       return {
         content: [
           {
             type: "text",
-            text: `Opened new ${style} pane ${label}.`,
+            text: `Opened new ${style} pane ${label}${focusNote}.`,
           },
         ],
       };
