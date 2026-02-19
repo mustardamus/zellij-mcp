@@ -173,17 +173,6 @@ Every tool description must explicitly state:
 5. **Ordering requirements** — If the tool requires a precondition (e.g., `rename_tab`
    requires the target tab to be focused first), the description must say so.
 
-### Specific Gaps to Address in Existing Tools
-
-| Tool | Gap |
-|------|-----|
-| `query_tab_names` | Does not mention it cannot show which tab is focused — only `dump_layout` can reveal focus state |
-| `dump_layout` | Does not mention the output is KDL format, or that it contains `focus=true` attributes showing the focused tab/pane |
-| `go_to_tab` | Does not mention the focus change is visible to the human user, or that it affects all clients in the session |
-| `rename_tab` | Does not warn that the agent must navigate to the target tab first if it is not already focused |
-| `close_tab` | Does not mention that focus moves to an adjacent tab afterward, that all panes/processes in the tab are killed, or that closing the last tab terminates the session |
-| `list_clients` | Does not describe the output format (tabular with CLIENT_ID, ZELLIJ_PANE_ID, RUNNING_COMMAND columns) |
-
 ### Missing MCP Annotations
 
 The MCP spec supports `readOnlyHint`, `idempotentHint`, and `openWorldHint` annotations.

@@ -12,7 +12,9 @@ export function registerTabTools(server: McpServer) {
     {
       title: "Go To Tab",
       description:
-        "Switch to a named tab in the Zellij session. Use query_tab_names first to discover available tab names.",
+        "Switch to a named tab in the Zellij session. Use query_tab_names first to discover available tab names. " +
+        "The focus change is visible to the human user and affects all clients connected to the session. " +
+        "Calling this with the already-focused tab name has no additional effect.",
       inputSchema: {
         name: z
           .string()
@@ -142,7 +144,9 @@ export function registerTabTools(server: McpServer) {
       description:
         "Close a tab in the Zellij session. " +
         "If target is provided, closes that specific tab and restores focus to the original tab. " +
-        "If target is omitted, closes the currently focused tab. " +
+        "If target is omitted, closes the currently focused tab and focus moves to an adjacent tab. " +
+        "All panes and their running processes within the tab are terminated. " +
+        "WARNING: Closing the last tab in the session will terminate the entire Zellij session. " +
         "Use with caution — this is destructive and cannot be undone.",
       annotations: {
         destructiveHint: true,
