@@ -50,40 +50,6 @@ npx zellij-mcp
 
 The server automatically detects the current Zellij session. Set `ZELLIJ_MCP_SESSION_NAME` to override the target session.
 
-## Prerequisites
-
-- [Bun](https://bun.sh)
-- A running [Zellij](https://zellij.dev/) session
-
-## Setup
-
-```bash
-git clone https://github.com/mustardamus/zellij-mcp.git
-cd zellij-mcp
-bun install
-bun run setup
-```
-
-## Development
-
-Start a Zellij session with four tabs - agent, editor, server, and git:
-
-```bash
-bun run dev:zellij
-```
-
-Requires:
-
-- [opencode](https://opencode.ai)
-- [Helix](https://helix-editor.com)
-- [lazygit](https://github.com/jesseduffield/lazygit)
-
-Or run the MCP server standalone (with watch mode):
-
-```bash
-bun run dev
-```
-
 ## Environment Variables
 
 ### `ZELLIJ_MCP_SESSION_NAME`
@@ -129,18 +95,10 @@ When focus preservation is active, the tool:
 These are the default behaviors — the agent will preserve focus automatically:
 
 > "Create a new tab called server"
->
-> "Run npm test in a floating pane"
->
-> "Rename the server tab to dev-server"
->
-> "Close the git tab"
 
 To override and switch focus, tell the agent explicitly:
 
 > "Create a new tab called server and switch to it"
->
-> "Run npm test in a floating pane and show me the output"
 
 ## Tools
 
@@ -377,3 +335,34 @@ Open a file in the user's `$EDITOR` (e.g. Helix, Vim, Nano) in a new Zellij pane
 ```bash
 zellij --session zellij-mcp action edit <file> [--floating] [--line-number <n>] [--direction <direction>] [--cwd <cwd>]
 ```
+
+## Development
+
+### Prerequisites
+
+- [Bun](https://bun.sh) - JavaScript runtime and package manager
+- [opencode](https://opencode.ai) - AI coding agent for the dev layout
+- [Helix](https://helix-editor.com) - terminal text editor for the dev layout
+- [lazygit](https://github.com/jesseduffield/lazygit) - terminal Git UI for the dev layout
+
+### Setup
+
+```bash
+git clone https://github.com/mustardamus/zellij-mcp.git
+cd zellij-mcp
+bun install
+bun run setup # downloads the latest Zellij binary for the current architecture
+```
+
+Start a Zellij session with four tabs - agent, editor, server, and git:
+
+```bash
+bun run dev:zellij
+```
+
+Or run the MCP server standalone (with watch mode):
+
+```bash
+bun run dev
+```
+
